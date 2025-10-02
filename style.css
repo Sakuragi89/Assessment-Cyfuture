@@ -154,6 +154,7 @@ button:disabled {
     margin: 0;
 }
 
+/* FIX: Hidden class */
 .hidden {
-    display: none;
+    display: none !important;
 }
