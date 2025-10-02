@@ -21,22 +21,33 @@ let currentEmployee = null;
 let currentQuestionIndex = 0;
 let userAnswers = new Array(quizData.length).fill(null);
 
-// DOM Elements
-const loginScreen = document.getElementById('loginScreen');
-const quizScreen = document.getElementById('quizScreen');
-const resultScreen = document.getElementById('resultScreen');
-const loginForm = document.getElementById('loginForm');
-const questionContainer = document.getElementById('questionContainer');
-const prevBtn = document.getElementById('prevBtn');
-const nextBtn = document.getElementById('nextBtn');
-const submitBtn = document.getElementById('submitBtn');
-
-// Event Listeners
+// Event Listeners - FIXED: Wait for DOM to load properly
 document.addEventListener('DOMContentLoaded', function() {
-    loginForm.addEventListener('submit', handleLogin);
-    prevBtn.addEventListener('click', previousQuestion);
-    nextBtn.addEventListener('click', nextQuestion);
-    submitBtn.addEventListener('click', submitQuiz);
+    // Initialize screens - hide quiz and result screens
+    const quizScreen = document.getElementById('quizScreen');
+    const resultScreen = document.getElementById('resultScreen');
+    
+    if (quizScreen) quizScreen.classList.add('hidden');
+    if (resultScreen) resultScreen.classList.add('hidden');
+    
+    // Add event listeners
+    const loginForm = document.getElementById('loginForm');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+    }
+    if (prevBtn) {
+        prevBtn.addEventListener('click', previousQuestion);
+    }
+    if (nextBtn) {
+        nextBtn.addEventListener('click', nextQuestion);
+    }
+    if (submitBtn) {
+        submitBtn.addEventListener('click', submitQuiz);
+    }
 });
 
 function handleLogin(e) {
@@ -44,19 +55,33 @@ function handleLogin(e) {
     const employeeId = document.getElementById('employeeId').value;
     const employeeName = document.getElementById('employeeName').value;
     
+    if (!employeeId || !employeeName) {
+        alert('Please enter both Employee ID and Name');
+        return;
+    }
+    
     currentEmployee = { id: employeeId, name: employeeName };
     
-    loginScreen.classList.add('hidden');
-    quizScreen.classList.remove('hidden');
+    // Hide login, show quiz
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('quizScreen').classList.remove('hidden');
     
+    // Update employee info
     document.getElementById('currentEmployeeName').textContent = employeeName;
     document.getElementById('currentEmployeeId').textContent = employeeId;
+    
+    // Reset quiz state
+    currentQuestionIndex = 0;
+    userAnswers = new Array(quizData.length).fill(null);
     
     loadQuestion();
 }
 
 function loadQuestion() {
     const question = quizData[currentQuestionIndex];
+    const questionContainer = document.getElementById('questionContainer');
+    
+    if (!questionContainer) return;
     
     questionContainer.innerHTML = `
         <div class="question">
@@ -82,9 +107,13 @@ function loadQuestion() {
     });
     
     // Update navigation buttons
-    prevBtn.disabled = currentQuestionIndex === 0;
-    nextBtn.classList.toggle('hidden', currentQuestionIndex === quizData.length - 1);
-    submitBtn.classList.toggle('hidden', currentQuestionIndex !== quizData.length - 1);
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    if (prevBtn) prevBtn.disabled = currentQuestionIndex === 0;
+    if (nextBtn) nextBtn.classList.toggle('hidden', currentQuestionIndex === quizData.length - 1);
+    if (submitBtn) submitBtn.classList.toggle('hidden', currentQuestionIndex !== quizData.length - 1);
 }
 
 function selectOption(index) {
@@ -126,8 +155,8 @@ function submitQuiz() {
     );
     
     // Switch to result screen
-    quizScreen.classList.add('hidden');
-    resultScreen.classList.remove('hidden');
+    document.getElementById('quizScreen').classList.add('hidden');
+    document.getElementById('resultScreen').classList.remove('hidden');
 }
 
 function saveQuizResult(employeeId, employeeName, score, percentage, answers) {
