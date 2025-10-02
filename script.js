@@ -145,3 +145,73 @@ function restartQuiz() {
     loginScreen.classList.remove('hidden');
     loginForm.reset();
 }
+
+// Add this function to save results
+function saveQuizResult(employeeId, employeeName, score, percentage, answers) {
+    const result = {
+        employeeId: employeeId,
+        employeeName: employeeName,
+        score: score,
+        total: quizData.length,
+        percentage: percentage,
+        answers: answers,
+        timestamp: new Date().toISOString(),
+        quiz: 'Employee Assessment Quiz'
+    };
+    
+    // Get existing results from localStorage
+    const allResults = JSON.parse(localStorage.getItem('allQuizResults') || '[]');
+    
+    // Add new result
+    allResults.push(result);
+    
+    // Save back to localStorage
+    localStorage.setItem('allQuizResults', JSON.stringify(allResults));
+    
+    return result;
+}
+
+// Update your submitQuiz function to call saveQuizResult
+function submitQuiz() {
+    let score = 0;
+    quizData.forEach((question, index) => {
+        if (userAnswers[index] === question.correct) {
+            score++;
+        }
+    });
+    
+    const percentage = Math.round((score / quizData.length) * 100);
+    
+    // Save the result
+    const result = saveQuizResult(
+        currentEmployee.id, 
+        currentEmployee.name, 
+        score, 
+        percentage, 
+        [...userAnswers]
+    );
+    
+    quizScreen.classList.add('hidden');
+    resultScreen.classList.remove('hidden');
+    
+    document.getElementById('resultEmployeeName').textContent = currentEmployee.name;
+    document.getElementById('resultEmployeeId').textContent = currentEmployee.id;
+    document.getElementById('finalScore').textContent = `${score}/${quizData.length} (${percentage}%)`;
+    
+    const message = document.getElementById('resultMessage');
+    if (percentage >= 80) {
+        message.textContent = "Excellent work!";
+        message.style.color = "green";
+    } else if (percentage >= 60) {
+        message.textContent = "Good job!";
+        message.style.color = "orange";
+    } else {
+        message.textContent = "Keep learning!";
+        message.style.color = "red";
+    }
+    
+    // Add admin link for convenience
+    const adminLink = document.createElement('p');
+    adminLink.innerHTML = '<br><a href="admin.html" style="color: #667eea;">View All Results (Admin)</a>';
+    message.appendChild(adminLink);
+}
