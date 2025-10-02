@@ -63,119 +63,127 @@
         </div>
     </div>
 
-    <script>
-        // Quiz Questions
-        const quizData = [
-            {
-                question: "What does HTML stand for?",
-                options: ["Hyper Text Markup Language", "High Tech Modern Language", "Hyper Transfer Markup Language", "Home Tool Markup Language"],
-                correct: 0
-            },
-            {
-                question: "Which programming language is known as the 'language of the web'?",
-                options: ["Python", "Java", "JavaScript", "C++"],
-                correct: 2
-            },
-            {
-                question: "What is the purpose of CSS?",
-                options: ["To structure web content", "To add interactivity to websites", "To style and layout web pages", "To manage databases"],
-                correct: 2
-            }
-        ];
+   <script>
+    // Quiz Questions
+    const quizData = [
+        {
+            question: "What does HTML stand for?",
+            options: ["Hyper Text Markup Language", "High Tech Modern Language", "Hyper Transfer Markup Language", "Home Tool Markup Language"],
+            correct: 0
+        },
+        {
+            question: "Which programming language is known as the 'language of the web'?",
+            options: ["Python", "Java", "JavaScript", "C++"],
+            correct: 2
+        },
+        {
+            question: "What is the purpose of CSS?",
+            options: ["To structure web content", "To add interactivity to websites", "To style and layout web pages", "To manage databases"],
+            correct: 2
+        }
+    ];
 
-        let currentEmployee = null;
-        let currentQuestionIndex = 0;
-        let userAnswers = new Array(quizData.length).fill(null);
+    let currentEmployee = null;
+    let currentQuestionIndex = 0;
+    let userAnswers = new Array(quizData.length).fill(null);
 
-        // Login Handler
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const employeeId = document.getElementById('employeeId').value;
-            const employeeName = document.getElementById('employeeName').value;
-            
-            currentEmployee = { id: employeeId, name: employeeName };
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('quizScreen').classList.remove('hidden');
-            
-            document.getElementById('currentEmployeeName').textContent = employeeName;
-            document.getElementById('currentEmployeeId').textContent = employeeId;
-            
-            loadQuestion();
-        });
+    // Login Handler
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const employeeId = document.getElementById('employeeId').value;
+        const employeeName = document.getElementById('employeeName').value;
+        
+        currentEmployee = { id: employeeId, name: employeeName };
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('quizScreen').classList.remove('hidden');
+        
+        document.getElementById('currentEmployeeName').textContent = employeeName;
+        document.getElementById('currentEmployeeId').textContent = employeeId;
+        
+        loadQuestion();
+    });
 
-        function loadQuestion() {
-            const question = quizData[currentQuestionIndex];
-            document.getElementById('questionContainer').innerHTML = `
-                <div class="question">
-                    <h3>Question ${currentQuestionIndex + 1}: ${question.question}</h3>
-                    <div class="options">
-                        ${question.options.map((option, index) => `
-                            <div class="option ${userAnswers[currentQuestionIndex] === index ? 'selected' : ''}" 
-                                 onclick="selectOption(${index})">${option}</div>
-                        `).join('')}
-                    </div>
+    function loadQuestion() {
+        const question = quizData[currentQuestionIndex];
+        const questionContainer = document.getElementById('questionContainer');
+        
+        questionContainer.innerHTML = `
+            <div class="question">
+                <h3>Question ${currentQuestionIndex + 1}: ${question.question}</h3>
+                <div class="options" id="optionsContainer">
+                    ${question.options.map((option, index) => `
+                        <div class="option ${userAnswers[currentQuestionIndex] === index ? 'selected' : ''}" 
+                             onclick="selectOption(${index})">
+                            ${option}
+                        </div>
+                    `).join('')}
                 </div>
-            `;
-            
-            document.getElementById('prevBtn').disabled = currentQuestionIndex === 0;
-            document.getElementById('nextBtn').classList.toggle('hidden', currentQuestionIndex === quizData.length - 1);
-            document.getElementById('submitBtn').classList.toggle('hidden', currentQuestionIndex !== quizData.length - 1);
-        }
+            </div>
+        `;
+        
+        // Update navigation buttons
+        document.getElementById('prevBtn').disabled = currentQuestionIndex === 0;
+        document.getElementById('nextBtn').classList.toggle('hidden', currentQuestionIndex === quizData.length - 1);
+        document.getElementById('submitBtn').classList.toggle('hidden', currentQuestionIndex !== quizData.length - 1);
+    }
 
-        function selectOption(index) {
-            userAnswers[currentQuestionIndex] = index;
+    // FIXED: Make these functions global
+    window.selectOption = function(index) {
+        userAnswers[currentQuestionIndex] = index;
+        loadQuestion();
+    }
+
+    window.nextQuestion = function() {
+        if (currentQuestionIndex < quizData.length - 1) {
+            currentQuestionIndex++;
             loadQuestion();
         }
+    }
 
-        function nextQuestion() {
-            if (currentQuestionIndex < quizData.length - 1) {
-                currentQuestionIndex++;
-                loadQuestion();
+    window.previousQuestion = function() {
+        if (currentQuestionIndex > 0) {
+            currentQuestionIndex--;
+            loadQuestion();
+        }
+    }
+
+    window.submitQuiz = function() {
+        let score = 0;
+        quizData.forEach((question, index) => {
+            if (userAnswers[index] === question.correct) {
+                score++;
             }
+        });
+        
+        const percentage = Math.round((score / quizData.length) * 100);
+        
+        document.getElementById('quizScreen').classList.add('hidden');
+        document.getElementById('resultScreen').classList.remove('hidden');
+        
+        document.getElementById('resultEmployeeName').textContent = currentEmployee.name;
+        document.getElementById('resultEmployeeId').textContent = currentEmployee.id;
+        document.getElementById('finalScore').textContent = `${score}/${quizData.length} (${percentage}%)`;
+        
+        const message = document.getElementById('resultMessage');
+        if (percentage >= 80) {
+            message.textContent = "Excellent work!";
+            message.style.color = "green";
+        } else if (percentage >= 60) {
+            message.textContent = "Good job!";
+            message.style.color = "orange";
+        } else {
+            message.textContent = "Keep learning!";
+            message.style.color = "red";
         }
+    }
 
-        function previousQuestion() {
-            if (currentQuestionIndex > 0) {
-                currentQuestionIndex--;
-                loadQuestion();
-            }
-        }
-
-        function submitQuiz() {
-            let score = 0;
-            quizData.forEach((question, index) => {
-                if (userAnswers[index] === question.correct) score++;
-            });
-            
-            const percentage = Math.round((score / quizData.length) * 100);
-            
-            document.getElementById('quizScreen').classList.add('hidden');
-            document.getElementById('resultScreen').classList.remove('hidden');
-            
-            document.getElementById('resultEmployeeName').textContent = currentEmployee.name;
-            document.getElementById('resultEmployeeId').textContent = currentEmployee.id;
-            document.getElementById('finalScore').textContent = `${score}/${quizData.length} (${percentage}%)`;
-            
-            const message = document.getElementById('resultMessage');
-            if (percentage >= 80) {
-                message.textContent = "Excellent work!";
-                message.style.color = "green";
-            } else if (percentage >= 60) {
-                message.textContent = "Good job!";
-                message.style.color = "orange";
-            } else {
-                message.textContent = "Keep learning!";
-                message.style.color = "red";
-            }
-        }
-
-        function restartQuiz() {
-            currentQuestionIndex = 0;
-            userAnswers = new Array(quizData.length).fill(null);
-            document.getElementById('resultScreen').classList.add('hidden');
-            document.getElementById('loginScreen').classList.remove('hidden');
-            document.getElementById('loginForm').reset();
-        }
-    </script>
+    window.restartQuiz = function() {
+        currentQuestionIndex = 0;
+        userAnswers = new Array(quizData.length).fill(null);
+        document.getElementById('resultScreen').classList.add('hidden');
+        document.getElementById('loginScreen').classList.remove('hidden');
+        document.getElementById('loginForm').reset();
+    }
+</script>
 </body>
 </html>
