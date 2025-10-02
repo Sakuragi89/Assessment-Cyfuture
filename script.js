@@ -182,8 +182,8 @@ function submitQuiz() {
     
     const percentage = Math.round((score / quizData.length) * 100);
     
-    // Save the result
-    const result = saveQuizResult(
+    // Save the result silently
+    saveQuizResult(
         currentEmployee.id, 
         currentEmployee.name, 
         score, 
@@ -191,35 +191,8 @@ function submitQuiz() {
         [...userAnswers]
     );
     
+    // Switch to result screen
     quizScreen.classList.add('hidden');
     resultScreen.classList.remove('hidden');
-    
-    document.getElementById('resultEmployeeName').textContent = currentEmployee.name;
-    document.getElementById('resultEmployeeId').textContent = currentEmployee.id;
-    document.getElementById('finalScore').textContent = `${score}/${quizData.length} (${percentage}%)`;
-    
-    const message = document.getElementById('resultMessage');
-    let performanceClass = '';
-    
-    if (percentage >= 90) {
-        message.innerHTML = '<span class="performance-excellent">Outstanding Performance! 🌟</span><br>You have demonstrated excellent knowledge.';
-        performanceClass = 'performance-excellent';
-    } else if (percentage >= 75) {
-        message.innerHTML = '<span class="performance-excellent">Very Good Performance! 👍</span><br>You have shown strong understanding.';
-        performanceClass = 'performance-excellent';
-    } else if (percentage >= 60) {
-        message.innerHTML = '<span class="performance-good">Good Performance! ✅</span><br>You have good knowledge with room for improvement.';
-        performanceClass = 'performance-good';
-    } else if (percentage >= 40) {
-        message.innerHTML = '<span class="performance-average">Satisfactory Performance 📊</span><br>Consider reviewing the material.';
-        performanceClass = 'performance-average';
-    } else {
-        message.innerHTML = '<span class="performance-poor">Needs Improvement 📚</span><br>We recommend additional training.';
-        performanceClass = 'performance-poor';
-    }
-    
-    // Add performance class to score display
-    document.getElementById('finalScore').className = `score-display ${performanceClass}`;
-}
-    
+}    
 }
