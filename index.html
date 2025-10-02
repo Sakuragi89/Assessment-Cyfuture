@@ -40,7 +40,33 @@
                 <button id="submitBtn" class="hidden">Submit Quiz</button>
             </div>
         </div>
+<!-- Results Screen -->
+<div id="resultScreen" class="hidden">
+    <div class="success-header">
+        <div class="success-icon">✅</div>
+        <h2>Assessment Completed Successfully!</h2>
+    </div>
+    
+    <div class="employee-info">
+        <strong>Employee:</strong> <span id="resultEmployeeName"></span> | 
+        <strong>ID:</strong> <span id="resultEmployeeId"></span>
+    </div>
 
+    <div class="result-card">
+        <h3>Your Score</h3>
+        <div class="score-display" id="finalScore"></div>
+        <p id="resultMessage"></p>
+        
+        <div class="thank-you-message">
+            <p>🎉 <strong>Thank you for completing the assessment!</strong></p>
+            <p>Your results have been recorded successfully.</p>
+        </div>
+        
+        <div class="actions">
+            <button id="restartBtn" class="btn-primary">Take Another Assessment</button>
+        </div>
+    </div>
+</div>
         </div>
     </div>
 
