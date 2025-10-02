@@ -1,64 +1,77 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-body {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-}
-
-.container {
-    background: white;
-    border-radius: 15px;
-    padding: 30px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    width: 100%;
-    max-width: 500px;
-}
-
-h1, h2 {
-    color: #333;
+/* Success Screen Styles */
+.success-header {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
+    padding: 20px;
+    background: linear-gradient(135deg, #28a745, #20c997);
+    border-radius: 10px;
+    color: white;
 }
 
-.form-group {
-    margin-bottom: 20px;
+.success-icon {
+    font-size: 3em;
+    margin-bottom: 10px;
 }
 
-label {
-    display: block;
-    margin-bottom: 5px;
-    color: #555;
-    font-weight: 500;
+.success-header h2 {
+    color: white;
+    margin: 0;
+    font-size: 1.8em;
 }
 
-input {
-    width: 100%;
-    padding: 12px;
-    border: 2px solid #ddd;
+.result-card {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 25px;
+    margin: 20px 0;
+    border-left: 4px solid #28a745;
+}
+
+.result-card h3 {
+    color: #333;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.score-display {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #667eea;
+    text-align: center;
+    margin: 20px 0;
+    padding: 15px;
+    background: white;
     border-radius: 8px;
-    font-size: 16px;
-    transition: border-color 0.3s;
+    border: 2px solid #e9ecef;
 }
 
-input:focus {
-    outline: none;
-    border-color: #667eea;
+.thank-you-message {
+    text-align: center;
+    margin: 25px 0;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
 }
 
-button {
-    width: 100%;
-    padding: 12px;
+.thank-you-message p {
+    margin: 10px 0;
+    color: #333;
+}
+
+.thank-you-message strong {
+    color: #28a745;
+}
+
+.actions {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.btn-primary {
     background: #667eea;
     color: white;
+    padding: 12px 30px;
     border: none;
     border-radius: 8px;
     font-size: 16px;
@@ -66,80 +79,27 @@ button {
     transition: background 0.3s;
 }
 
-button:hover {
+.btn-primary:hover {
     background: #5a6fd8;
 }
 
-button:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-}
-
-.employee-info {
-    background: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    text-align: center;
-}
-
-.question {
-    margin-bottom: 25px;
-    padding: 20px;
-    border: 2px solid #f0f0f0;
-    border-radius: 10px;
-}
-
-.options {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 15px;
-}
-
-.option {
-    padding: 12px;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.option:hover {
-    background: #f8f9fa;
-    border-color: #667eea;
-}
-
-.option.selected {
-    background: #667eea;
-    color: white;
-    border-color: #667eea;
-}
-
-.navigation {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-.navigation button {
-    width: auto;
-    flex: 1;
-}
-
-.result {
-    text-align: center;
-    padding: 20px;
-}
-
-.score {
-    font-size: 2em;
+/* Performance badges */
+.performance-excellent {
+    color: #28a745;
     font-weight: bold;
-    color: #667eea;
-    margin: 20px 0;
 }
 
-.hidden {
-    display: none;
+.performance-good {
+    color: #ffc107;
+    font-weight: bold;
+}
+
+.performance-average {
+    color: #fd7e14;
+    font-weight: bold;
+}
+
+.performance-poor {
+    color: #dc3545;
+    font-weight: bold;
 }
