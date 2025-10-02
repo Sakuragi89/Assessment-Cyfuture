@@ -30,7 +30,6 @@ const questionContainer = document.getElementById('questionContainer');
 const prevBtn = document.getElementById('prevBtn');
 const nextBtn = document.getElementById('nextBtn');
 const submitBtn = document.getElementById('submitBtn');
-const restartBtn = document.getElementById('restartBtn');
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
@@ -38,7 +37,6 @@ document.addEventListener('DOMContentLoaded', function() {
     prevBtn.addEventListener('click', previousQuestion);
     nextBtn.addEventListener('click', nextQuestion);
     submitBtn.addEventListener('click', submitQuiz);
-    restartBtn.addEventListener('click', restartQuiz);
 });
 
 function handleLogin(e) {
@@ -118,35 +116,20 @@ function submitQuiz() {
     
     const percentage = Math.round((score / quizData.length) * 100);
     
+    // Save the result silently
+    saveQuizResult(
+        currentEmployee.id, 
+        currentEmployee.name, 
+        score, 
+        percentage, 
+        [...userAnswers]
+    );
+    
+    // Switch to result screen
     quizScreen.classList.add('hidden');
     resultScreen.classList.remove('hidden');
-    
-    document.getElementById('resultEmployeeName').textContent = currentEmployee.name;
-    document.getElementById('resultEmployeeId').textContent = currentEmployee.id;
-    document.getElementById('finalScore').textContent = `${score}/${quizData.length} (${percentage}%)`;
-    
-    const message = document.getElementById('resultMessage');
-    if (percentage >= 80) {
-        message.textContent = "Excellent work!";
-        message.style.color = "green";
-    } else if (percentage >= 60) {
-        message.textContent = "Good job!";
-        message.style.color = "orange";
-    } else {
-        message.textContent = "Keep learning!";
-        message.style.color = "red";
-    }
 }
 
-function restartQuiz() {
-    currentQuestionIndex = 0;
-    userAnswers = new Array(quizData.length).fill(null);
-    resultScreen.classList.add('hidden');
-    loginScreen.classList.remove('hidden');
-    loginForm.reset();
-}
-
-// Add this function to save results
 function saveQuizResult(employeeId, employeeName, score, percentage, answers) {
     const result = {
         employeeId: employeeId,
@@ -169,30 +152,4 @@ function saveQuizResult(employeeId, employeeName, score, percentage, answers) {
     localStorage.setItem('allQuizResults', JSON.stringify(allResults));
     
     return result;
-}
-
-// Update your submitQuiz function to call saveQuizResult
-function submitQuiz() {
-    let score = 0;
-    quizData.forEach((question, index) => {
-        if (userAnswers[index] === question.correct) {
-            score++;
-        }
-    });
-    
-    const percentage = Math.round((score / quizData.length) * 100);
-    
-    // Save the result silently
-    saveQuizResult(
-        currentEmployee.id, 
-        currentEmployee.name, 
-        score, 
-        percentage, 
-        [...userAnswers]
-    );
-    
-    // Switch to result screen
-    quizScreen.classList.add('hidden');
-    resultScreen.classList.remove('hidden');
-}    
 }
