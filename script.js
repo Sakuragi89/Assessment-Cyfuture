@@ -210,8 +210,4 @@ function submitQuiz() {
         message.style.color = "red";
     }
     
-    // Add admin link for convenience
-    const adminLink = document.createElement('p');
-    adminLink.innerHTML = '<br><a href="admin.html" style="color: #667eea;">View All Results (Admin)</a>';
-    message.appendChild(adminLink);
 }
