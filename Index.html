@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee MCQ Quiz</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Login Screen -->
+        <div id="loginScreen">
+            <h1>🧠 Employee Quiz Portal</h1>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="employeeId">Employee ID</label>
+                    <input type="text" id="employeeId" placeholder="Enter your employee ID" required>
+                </div>
+                <div class="form-group">
+                    <label for="employeeName">Full Name</label>
+                    <input type="text" id="employeeName" placeholder="Enter your full name" required>
+                </div>
+                <button type="submit">Start Quiz</button>
+            </form>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quizScreen" class="hidden">
+            <div class="employee-info">
+                <strong>Employee:</strong> <span id="currentEmployeeName"></span> | 
+                <strong>ID:</strong> <span id="currentEmployeeId"></span>
+            </div>
+            <h2>MCQ Quiz</h2>
+            <div id="questionContainer">
+                <!-- Questions load here -->
+            </div>
+            <div class="navigation">
+                <button id="prevBtn">Previous</button>
+                <button id="nextBtn">Next</button>
+                <button id="submitBtn" class="hidden">Submit Quiz</button>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="resultScreen" class="hidden">
+            <h2>Quiz Completed!</h2>
+            <div class="employee-info">
+                <strong>Employee:</strong> <span id="resultEmployeeName"></span> | 
+                <strong>ID:</strong> <span id="resultEmployeeId"></span>
+            </div>
+            <div class="result">
+                <div class="score" id="finalScore"></div>
+                <p id="resultMessage"></p>
+                <button id="restartBtn">Take Another Quiz</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
