@@ -199,15 +199,27 @@ function submitQuiz() {
     document.getElementById('finalScore').textContent = `${score}/${quizData.length} (${percentage}%)`;
     
     const message = document.getElementById('resultMessage');
-    if (percentage >= 80) {
-        message.textContent = "Excellent work!";
-        message.style.color = "green";
+    let performanceClass = '';
+    
+    if (percentage >= 90) {
+        message.innerHTML = '<span class="performance-excellent">Outstanding Performance! 🌟</span><br>You have demonstrated excellent knowledge.';
+        performanceClass = 'performance-excellent';
+    } else if (percentage >= 75) {
+        message.innerHTML = '<span class="performance-excellent">Very Good Performance! 👍</span><br>You have shown strong understanding.';
+        performanceClass = 'performance-excellent';
     } else if (percentage >= 60) {
-        message.textContent = "Good job!";
-        message.style.color = "orange";
+        message.innerHTML = '<span class="performance-good">Good Performance! ✅</span><br>You have good knowledge with room for improvement.';
+        performanceClass = 'performance-good';
+    } else if (percentage >= 40) {
+        message.innerHTML = '<span class="performance-average">Satisfactory Performance 📊</span><br>Consider reviewing the material.';
+        performanceClass = 'performance-average';
     } else {
-        message.textContent = "Keep learning!";
-        message.style.color = "red";
+        message.innerHTML = '<span class="performance-poor">Needs Improvement 📚</span><br>We recommend additional training.';
+        performanceClass = 'performance-poor';
     }
+    
+    // Add performance class to score display
+    document.getElementById('finalScore').className = `score-display ${performanceClass}`;
+}
     
 }
