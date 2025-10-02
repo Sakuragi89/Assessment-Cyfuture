@@ -18,7 +18,46 @@
             <button onclick="clearAllResults()" class="btn btn-danger">🗑️ Clear All Results</button>
             <button onclick="location.href='index.html'" class="btn btn-secondary">← Back to Quiz</button>
         </div>
+<!-- Add this in admin.html after the controls div and before results-section -->
+<div class="upload-section">
+    <h2>📤 Upload Questions from Excel/CSV</h2>
+    
+    <div class="upload-instructions">
+        <h3>File Format Instructions:</h3>
+        <p>Create a CSV file with these columns:</p>
+        <ul>
+            <li><strong>question</strong> - The question text</li>
+            <li><strong>option1, option2, option3, option4</strong> - The four answer options</li>
+            <li><strong>correct_answer</strong> - Number (1-4) of the correct option</li>
+            <li><strong>category</strong> - Quiz category (e.g., "Technical", "General")</li>
+        </ul>
+        
+        <div class="format-example">
+            <strong>Example:</strong>
+            <pre>question,option1,option2,option3,option4,correct_answer,category
+"What does HTML stand for?","Hyper Text Markup Language","High Tech Modern Language","Hyper Transfer Markup Language","Home Tool Markup Language",1,"Technical"
+"Which language runs in browsers?","Python","Java","JavaScript","C++",3,"Technical"</pre>
+        </div>
+    </div>
 
+    <div class="upload-area">
+        <input type="file" id="questionsFile" accept=".csv,.xlsx,.xls" class="file-input">
+        <label for="questionsFile" class="file-label">
+            <div class="upload-icon">📁</div>
+            <span>Choose CSV or Excel File</span>
+        </label>
+        <button id="uploadBtn" class="btn btn-primary">Upload Questions</button>
+    </div>
+
+    <div id="uploadStatus" class="upload-status hidden"></div>
+
+    <div class="quiz-management">
+        <h3>Available Quizzes</h3>
+        <div id="quizList" class="quiz-list">
+            <!-- Quizzes will be listed here -->
+        </div>
+    </div>
+</div>
         <div class="stats">
             <div class="stat-card">
                 <h3 id="totalAttempts">0</h3>
