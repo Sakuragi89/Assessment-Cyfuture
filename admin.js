@@ -514,14 +514,21 @@ function exportCSVWithFormatting(results) {
     
     downloadCSV(csv, `detailed_results_${getCurrentDate()}.csv`);
 }
-
 function getQuizDataForResult(result) {
-    // Get the correct quiz data for this specific result
-    if (result.quiz && allQuizzes[result.quiz]) {
+    // Priority 1: Use quiz data saved with the result
+    if (result.quizData && result.quizData.length > 0) {
+        return result.quizData;
+    }
+    // Priority 2: Find quiz data by category
+    else if (result.quiz && allQuizzes[result.quiz]) {
         return allQuizzes[result.quiz];
-    } else if (currentQuizData && currentQuizData.length > 0) {
+    }
+    // Priority 3: Use current active quiz
+    else if (currentQuizData && currentQuizData.length > 0) {
         return currentQuizData;
-    } else {
+    }
+    // Priority 4: Use default quiz
+    else {
         return defaultQuizData;
     }
 }
