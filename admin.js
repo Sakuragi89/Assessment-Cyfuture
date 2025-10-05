@@ -577,41 +577,87 @@ function displayResults(results) {
 
 function viewDetails(index) {
     const results = JSON.parse(localStorage.getItem('allQuizResults') || '[]');
+    
+    if (index >= results.length) {
+        console.error('Invalid result index:', index);
+        return;
+    }
+    
     const result = results[index];
-    const quizData = allQuizzes[result.quiz] || [];
+    console.log('Viewing details for result:', result);
+    
+    // Get the correct quiz data for this specific result
+    let quizData = [];
+    
+    // Try to find the quiz data in this order:
+    // 1. From the result's quiz category
+    if (result.quiz && allQuizzes[result.quiz]) {
+        quizData = allQuizzes[result.quiz];
+        console.log('Found quiz data for category:', result.quiz);
+    }
+    // 2. From current active quiz
+    else if (currentQuizData && currentQuizData.length > 0) {
+        quizData = currentQuizData;
+        console.log('Using current active quiz data');
+    }
+    // 3. From default quiz
+    else {
+        quizData = defaultQuizData;
+        console.log('Using default quiz data');
+    }
     
     const modalContent = document.getElementById('modalContent');
+    
     let detailsHTML = `
         <div class="result-details">
-            <div class="detail-item"><strong>Employee ID:</strong> ${result.employeeId}</div>
-            <div class="detail-item"><strong>Name:</strong> ${result.employeeName}</div>
-            <div class="detail-item"><strong>Score:</strong> ${result.score}/${result.total}</div>
-            <div class="detail-item"><strong>Percentage:</strong> ${result.percentage}%</div>
-            <div class="detail-item"><strong>Quiz:</strong> ${result.quiz}</div>
-            <div class="detail-item"><strong>Date:</strong> ${new Date(result.timestamp).toLocaleString()}</div>
-            <div class="detail-item"><strong>Status:</strong> <span class="${result.percentage >= 60 ? 'status-pass' : 'status-fail'}">${result.percentage >= 60 ? 'PASSED' : 'FAILED'}</span></div>
-            
-            <h3 style="margin-top: 20px;">Question-wise Analysis:</h3>
+            <div class="detail-item"><strong>Employee ID:</strong> ${result.employeeId || 'N/A'}</div>
+            <div class="detail-item"><strong>Name:</strong> ${result.employeeName || 'N/A'}</div>
+            <div class="detail-item"><strong>Score:</strong> ${result.score || 0}/${result.total || 0}</div>
+            <div class="detail-item"><strong>Percentage:</strong> ${result.percentage || 0}%</div>
+            <div class="detail-item"><strong>Quiz Category:</strong> ${result.quiz || 'Not specified'}</div>
+            <div class="detail-item"><strong>Date:</strong> ${result.timestamp ? new Date(result.timestamp).toLocaleString() : 'N/A'}</div>
+            <div class="detail-item"><strong>Status:</strong> <span class="${(result.percentage || 0) >= 60 ? 'status-pass' : 'status-fail'}">${(result.percentage || 0) >= 60 ? 'PASSED' : 'FAILED'}</span></div>
     `;
     
-    result.answers.forEach((answer, qIndex) => {
-        const question = quizData[qIndex];
-        if (!question) return;
+    // Check if we have answers and quiz data
+    if (result.answers && Array.isArray(result.answers) && quizData.length > 0) {
+        detailsHTML += `<h3 style="margin-top: 20px;">Question-wise Analysis:</h3>`;
         
-        const isCorrect = answer === question.correct;
-        const answerText = answer === null ? 'Skipped' : question.options[answer];
-        const correctAnswer = question.options[question.correct];
-        const status = answer === null ? 'skipped' : (isCorrect ? 'correct' : 'wrong');
-        
+        result.answers.forEach((answer, qIndex) => {
+            const question = quizData[qIndex];
+            
+            if (!question) {
+                detailsHTML += `
+                    <div class="question-detail" style="border-left-color: #6c757d">
+                        <strong>Q${qIndex + 1}:</strong> Question data not available<br>
+                        <span class="answer-skipped"><strong>Selected:</strong> ${answer === null ? 'Skipped' : 'Option ' + (answer + 1)}</span><br>
+                        <strong>Status:</strong> <span class="status-skipped">DATA UNAVAILABLE</span>
+                    </div>
+                `;
+                return;
+            }
+            
+            const isCorrect = answer === question.correct;
+            const answerText = answer === null ? 'Skipped' : question.options[answer];
+            const correctAnswer = question.options[question.correct];
+            const status = answer === null ? 'skipped' : (isCorrect ? 'correct' : 'wrong');
+            
+            detailsHTML += `
+                <div class="question-detail" style="border-left-color: ${getStatusColor(status)}">
+                    <strong>Q${qIndex + 1}:</strong> ${question.question}<br>
+                    <span class="answer-${status}"><strong>Selected:</strong> ${answerText}</span><br>
+                    <span class="answer-correct"><strong>Correct Answer:</strong> ${correctAnswer}</span><br>
+                    <strong>Status:</strong> <span class="status-${status}">${status.toUpperCase()}</span>
+                </div>
+            `;
+        });
+    } else {
         detailsHTML += `
-            <div class="question-detail" style="border-left-color: ${getStatusColor(status)}">
-                <strong>Q${qIndex + 1}:</strong> ${question.question}<br>
-                <span class="answer-${status}"><strong>Selected:</strong> ${answerText}</span><br>
-                <span class="answer-correct"><strong>Correct:</strong> ${correctAnswer}</span><br>
-                <strong>Status:</strong> <span class="status-${status}">${status.toUpperCase()}</span>
+            <div style="margin-top: 20px; padding: 15px; background: #f8d7da; color: #721c24; border-radius: 5px;">
+                <strong>Data Issue:</strong> Unable to display question details. Quiz data may be missing or corrupted.
             </div>
         `;
-    });
+    }
     
     detailsHTML += `</div>`;
     modalContent.innerHTML = detailsHTML;
