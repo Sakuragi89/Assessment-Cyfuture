@@ -197,7 +197,7 @@ function saveQuizResult(employeeId, employeeName, score, percentage, answers, qu
         percentage: percentage,
         answers: answers,
         timestamp: new Date().toISOString(),
-        quiz: quizCategory || (quizData[0]?.category || 'Default') // Ensure quiz category is saved
+        quiz: quizCategory || (quizData[0]?.category || 'Default')
     };
     
     // Get existing results from localStorage
