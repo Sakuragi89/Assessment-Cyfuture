@@ -489,3 +489,25 @@ function exportToCSV() {
     a.click();
     document.body.removeChild(a);
 }
+// Force update main quiz data
+function refreshMainQuiz() {
+    const activeQuiz = localStorage.getItem('activeQuiz');
+    const allQuizzes = JSON.parse(localStorage.getItem('allQuizzes') || '{}');
+    
+    if (activeQuiz && allQuizzes[activeQuiz]) {
+        localStorage.setItem('currentQuiz', JSON.stringify(allQuizzes[activeQuiz]));
+        console.log('Main quiz refreshed with', allQuizzes[activeQuiz].length, 'questions from', activeQuiz);
+    }
+}
+
+// Call this when setting active quiz
+function setActiveQuiz(category) {
+    if (allQuizzes[category]) {
+        localStorage.setItem('activeQuiz', category);
+        currentQuizData = allQuizzes[category];
+        localStorage.setItem('currentQuiz', JSON.stringify(currentQuizData));
+        refreshMainQuiz();
+        showUploadStatus(`"${category}" quiz is now active!`, 'success');
+        loadQuizList();
+    }
+}
