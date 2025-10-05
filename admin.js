@@ -9,6 +9,12 @@ const defaultQuizData = [
         options: ["Hyper Text Markup Language", "High Tech Modern Language", "Hyper Transfer Markup Language", "Home Tool Markup Language"],
         correct: 0,
         category: "Technical"
+    },
+    {
+        question: "Which programming language is known as the 'language of the web'?",
+        options: ["Python", "Java", "JavaScript", "C++"],
+        correct: 2,
+        category: "Technical"
     }
 ];
 
@@ -369,7 +375,6 @@ function exportQuiz(category) {
     downloadCSV(csv, `quiz_${category}_${getCurrentDate()}.csv`);
 }
 
-// NEW: Custom Export Format with Red Highlighting for Wrong Answers
 function exportDetailedResults() {
     const results = JSON.parse(localStorage.getItem('allQuizResults') || '[]');
     
@@ -399,7 +404,7 @@ function exportExcelWithFormatting(results) {
         // Add question headers
         if (results.length > 0) {
             const firstResult = results[0];
-            const quizData = allQuizzes[firstResult.quiz] || [];
+            const quizData = getQuizDataForResult(firstResult);
             quizData.forEach((q, index) => {
                 headers.push(q.question);
             });
@@ -409,7 +414,7 @@ function exportExcelWithFormatting(results) {
         
         // Add data rows
         results.forEach(result => {
-            const quizData = allQuizzes[result.quiz] || [];
+            const quizData = getQuizDataForResult(result);
             const scorePercent = Math.round(result.percentage);
             
             const row = [
@@ -442,20 +447,24 @@ function exportExcelWithFormatting(results) {
         if (!ws['!conditionalFormats']) ws['!conditionalFormats'] = [];
         
         // Apply red color to cells starting with *
-        quizData.forEach((_, index) => {
-            const col = XLSX.utils.encode_col(5 + index); // Start from column F (5)
-            ws['!conditionalFormats'].push({
-                ref: `${col}2:${col}${results.length + 1}`,
-                rules: [
-                    {
-                        type: 'containsText',
-                        operator: 'containsText',
-                        text: '*',
-                        style: { fill: { fgColor: { rgb: 'FFCCCC' } }, font: { color: { rgb: 'FF0000' } } }
-                    }
-                ]
+        if (results.length > 0) {
+            const firstResult = results[0];
+            const quizData = getQuizDataForResult(firstResult);
+            quizData.forEach((_, index) => {
+                const col = XLSX.utils.encode_col(5 + index); // Start from column F (5)
+                ws['!conditionalFormats'].push({
+                    ref: `${col}2:${col}${results.length + 1}`,
+                    rules: [
+                        {
+                            type: 'containsText',
+                            operator: 'containsText',
+                            text: '*',
+                            style: { fill: { fgColor: { rgb: 'FFCCCC' } }, font: { color: { rgb: 'FF0000' } } }
+                        }
+                    ]
+                });
             });
-        });
+        }
         
         XLSX.utils.book_append_sheet(wb, ws, 'Results');
         XLSX.writeFile(wb, `detailed_results_${getCurrentDate()}.xlsx`);
@@ -472,7 +481,7 @@ function exportCSVWithFormatting(results) {
     // Add question headers
     if (results.length > 0) {
         const firstResult = results[0];
-        const quizData = allQuizzes[firstResult.quiz] || [];
+        const quizData = getQuizDataForResult(firstResult);
         quizData.forEach((q, index) => {
             csv += `,"${q.question}"`;
         });
@@ -481,7 +490,7 @@ function exportCSVWithFormatting(results) {
     csv += ',Score %\n';
     
     results.forEach(result => {
-        const quizData = allQuizzes[result.quiz] || [];
+        const quizData = getQuizDataForResult(result);
         const scorePercent = Math.round(result.percentage);
         
         let row = `"${new Date(result.timestamp).toLocaleString()}","${result.score}/${result.total}","${result.employeeId}","${result.employeeName}"`;
@@ -504,6 +513,17 @@ function exportCSVWithFormatting(results) {
     });
     
     downloadCSV(csv, `detailed_results_${getCurrentDate()}.csv`);
+}
+
+function getQuizDataForResult(result) {
+    // Get the correct quiz data for this specific result
+    if (result.quiz && allQuizzes[result.quiz]) {
+        return allQuizzes[result.quiz];
+    } else if (currentQuizData && currentQuizData.length > 0) {
+        return currentQuizData;
+    } else {
+        return defaultQuizData;
+    }
 }
 
 function downloadCSV(csv, filename) {
@@ -587,24 +607,7 @@ function viewDetails(index) {
     console.log('Viewing details for result:', result);
     
     // Get the correct quiz data for this specific result
-    let quizData = [];
-    
-    // Try to find the quiz data in this order:
-    // 1. From the result's quiz category
-    if (result.quiz && allQuizzes[result.quiz]) {
-        quizData = allQuizzes[result.quiz];
-        console.log('Found quiz data for category:', result.quiz);
-    }
-    // 2. From current active quiz
-    else if (currentQuizData && currentQuizData.length > 0) {
-        quizData = currentQuizData;
-        console.log('Using current active quiz data');
-    }
-    // 3. From default quiz
-    else {
-        quizData = defaultQuizData;
-        console.log('Using default quiz data');
-    }
+    const quizData = getQuizDataForResult(result);
     
     const modalContent = document.getElementById('modalContent');
     
