@@ -173,14 +173,15 @@ function submitQuiz() {
     
     const percentage = Math.round((score / quizData.length) * 100);
     
-    // Save the result silently
+    // Save the result with complete quiz data
     saveQuizResult(
         currentEmployee.id, 
         currentEmployee.name, 
         score, 
         percentage, 
         [...userAnswers],
-        quizData[0]?.category || 'Default'
+        quizData[0]?.category || 'Default',
+        JSON.parse(JSON.stringify(quizData)) // Save complete quiz data
     );
     
     // Switch to result screen
@@ -188,7 +189,7 @@ function submitQuiz() {
     resultScreen.classList.remove('hidden');
 }
 
-function saveQuizResult(employeeId, employeeName, score, percentage, answers, quizCategory) {
+function saveQuizResult(employeeId, employeeName, score, percentage, answers, quizCategory, quizDataCopy) {
     const result = {
         employeeId: employeeId,
         employeeName: employeeName,
@@ -197,7 +198,8 @@ function saveQuizResult(employeeId, employeeName, score, percentage, answers, qu
         percentage: percentage,
         answers: answers,
         timestamp: new Date().toISOString(),
-        quiz: quizCategory || (quizData[0]?.category || 'Default')
+        quiz: quizCategory || (quizData[0]?.category || 'Default'),
+        quizData: quizDataCopy // Save the actual quiz questions and answers
     };
     
     // Get existing results from localStorage
@@ -209,7 +211,7 @@ function saveQuizResult(employeeId, employeeName, score, percentage, answers, qu
     // Save back to localStorage
     localStorage.setItem('allQuizResults', JSON.stringify(allResults));
     
-    console.log('Result saved for', employeeName, 'in quiz', result.quiz);
+    console.log('Result saved for', employeeName, 'in quiz', result.quiz, 'with', result.quizData.length, 'questions');
     
     return result;
 }
