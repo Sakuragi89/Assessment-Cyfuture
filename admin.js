@@ -1,6 +1,9 @@
-// Admin Dashboard Functionality
+// Combined Admin and Employee Quiz Functionality
 let allQuizzes = JSON.parse(localStorage.getItem('allQuizzes')) || {};
 let currentQuizData = [];
+let currentEmployee = null;
+let currentQuestionIndex = 0;
+let userAnswers = [];
 
 // Default quiz data
 const defaultQuizData = [
@@ -18,12 +21,16 @@ const defaultQuizData = [
     }
 ];
 
-// Initialize admin dashboard
+// Initialize portal
 document.addEventListener('DOMContentLoaded', function() {
     initializeQuizzes();
     loadAllResults();
     setupModal();
     setupUploadFunctionality();
+    setupEmployeeQuiz();
+    
+    // Show employee tab by default
+    openTab('employeeTab');
 });
 
 function initializeQuizzes() {
@@ -41,8 +48,219 @@ function initializeQuizzes() {
     }
     
     loadQuizList();
+    updateActiveQuizDisplay();
 }
 
+function setupEmployeeQuiz() {
+    const employeeLoginForm = document.getElementById('employeeLoginForm');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    if (employeeLoginForm) {
+        employeeLoginForm.addEventListener('submit', handleEmployeeLogin);
+    }
+    if (prevBtn) {
+        prevBtn.addEventListener('click', previousQuestion);
+    }
+    if (nextBtn) {
+        nextBtn.addEventListener('click', nextQuestion);
+    }
+    if (submitBtn) {
+        submitBtn.addEventListener('click', submitEmployeeQuiz);
+    }
+}
+
+function handleEmployeeLogin(e) {
+    e.preventDefault();
+    const employeeId = document.getElementById('employeeId').value;
+    const employeeName = document.getElementById('employeeName').value;
+    
+    if (!employeeId || !employeeName) {
+        alert('Please enter both Employee ID and Name');
+        return;
+    }
+    
+    currentEmployee = { id: employeeId, name: employeeName };
+    
+    // Load current quiz data
+    const activeQuiz = localStorage.getItem('activeQuiz') || 'Technical';
+    if (allQuizzes[activeQuiz]) {
+        currentQuizData = allQuizzes[activeQuiz];
+    }
+    
+    // Reset quiz state
+    currentQuestionIndex = 0;
+    userAnswers = new Array(currentQuizData.length).fill(null);
+    
+    // Show quiz screen
+    document.getElementById('employeeLoginScreen').classList.add('hidden');
+    document.getElementById('employeeQuizScreen').classList.remove('hidden');
+    
+    document.getElementById('currentEmployeeName').textContent = employeeName;
+    document.getElementById('currentEmployeeId').textContent = employeeId;
+    document.getElementById('currentQuizName').textContent = activeQuiz;
+    
+    loadQuestion();
+}
+
+function loadQuestion() {
+    if (currentQuizData.length === 0) {
+        console.error('No quiz data available');
+        return;
+    }
+    
+    const question = currentQuizData[currentQuestionIndex];
+    const questionContainer = document.getElementById('questionContainer');
+    
+    questionContainer.innerHTML = `
+        <div class="question">
+            <h3>Question ${currentQuestionIndex + 1}: ${question.question}</h3>
+            <div class="options">
+                ${question.options.map((option, index) => `
+                    <div class="option ${userAnswers[currentQuestionIndex] === index ? 'selected' : ''}" 
+                         data-index="${index}">
+                        ${option}
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+    
+    // Add event listeners to options
+    const options = questionContainer.querySelectorAll('.option');
+    options.forEach(option => {
+        option.addEventListener('click', function() {
+            const selectedIndex = parseInt(this.getAttribute('data-index'));
+            selectOption(selectedIndex);
+        });
+    });
+    
+    // Update navigation buttons
+    document.getElementById('prevBtn').disabled = currentQuestionIndex === 0;
+    document.getElementById('nextBtn').classList.toggle('hidden', currentQuestionIndex === currentQuizData.length - 1);
+    document.getElementById('submitBtn').classList.toggle('hidden', currentQuestionIndex !== currentQuizData.length - 1);
+    
+    // Update progress
+    document.getElementById('quizProgress').textContent = `${currentQuestionIndex + 1}/${currentQuizData.length}`;
+}
+
+function selectOption(index) {
+    userAnswers[currentQuestionIndex] = index;
+    loadQuestion();
+}
+
+function nextQuestion() {
+    if (currentQuestionIndex < currentQuizData.length - 1) {
+        currentQuestionIndex++;
+        loadQuestion();
+    }
+}
+
+function previousQuestion() {
+    if (currentQuestionIndex > 0) {
+        currentQuestionIndex--;
+        loadQuestion();
+    }
+}
+
+function submitEmployeeQuiz() {
+    if (currentQuizData.length === 0) {
+        console.error('No quiz data available for submission');
+        return;
+    }
+    
+    let score = 0;
+    currentQuizData.forEach((question, index) => {
+        if (userAnswers[index] === question.correct) {
+            score++;
+        }
+    });
+    
+    const percentage = Math.round((score / currentQuizData.length) * 100);
+    
+    // Save the result with complete quiz data
+    saveQuizResult(
+        currentEmployee.id, 
+        currentEmployee.name, 
+        score, 
+        percentage, 
+        [...userAnswers],
+        currentQuizData[0]?.category || 'Default',
+        JSON.parse(JSON.stringify(currentQuizData))
+    );
+    
+    // Switch to result screen
+    document.getElementById('employeeQuizScreen').classList.add('hidden');
+    document.getElementById('employeeResultScreen').classList.remove('hidden');
+}
+
+function saveQuizResult(employeeId, employeeName, score, percentage, answers, quizCategory, quizDataCopy) {
+    const result = {
+        employeeId: employeeId,
+        employeeName: employeeName,
+        score: score,
+        total: quizDataCopy.length,
+        percentage: percentage,
+        answers: answers,
+        timestamp: new Date().toISOString(),
+        quiz: quizCategory,
+        quizData: quizDataCopy
+    };
+    
+    // Get existing results from localStorage
+    const allResults = JSON.parse(localStorage.getItem('allQuizResults') || '[]');
+    
+    // Add new result
+    allResults.push(result);
+    
+    // Save back to localStorage
+    localStorage.setItem('allQuizResults', JSON.stringify(allResults));
+    
+    console.log('Result saved for', employeeName, 'in quiz', result.quiz);
+    
+    return result;
+}
+
+function restartEmployeeQuiz() {
+    document.getElementById('employeeResultScreen').classList.add('hidden');
+    document.getElementById('employeeLoginScreen').classList.remove('hidden');
+    document.getElementById('employeeLoginForm').reset();
+    currentEmployee = null;
+    currentQuestionIndex = 0;
+    userAnswers = [];
+}
+
+// Tab Management
+function openTab(tabName) {
+    // Hide all tab contents
+    const tabContents = document.getElementsByClassName('tab-content');
+    for (let i = 0; i < tabContents.length; i++) {
+        tabContents[i].classList.remove('active');
+    }
+    
+    // Remove active class from all tab buttons
+    const tabButtons = document.getElementsByClassName('tab-button');
+    for (let i = 0; i < tabButtons.length; i++) {
+        tabButtons[i].classList.remove('active');
+    }
+    
+    // Show the specific tab content and activate the button
+    document.getElementById(tabName).classList.add('active');
+    event.currentTarget.classList.add('active');
+    
+    // Reload data when switching to admin tab
+    if (tabName === 'adminTab') {
+        loadAllResults();
+    }
+}
+
+function updateActiveQuizDisplay() {
+    const activeQuiz = localStorage.getItem('activeQuiz') || 'Technical';
+    document.getElementById('currentActiveQuiz').textContent = activeQuiz;
+}
+
+// Admin functionality (rest of your existing admin code)
 function setupUploadFunctionality() {
     const uploadBtn = document.getElementById('uploadBtn');
     const fileInput = document.getElementById('questionsFile');
@@ -320,6 +538,7 @@ function loadQuizList() {
     });
     
     document.getElementById('activeQuiz').textContent = activeQuiz;
+    updateActiveQuizDisplay();
 }
 
 function setActiveQuiz(category) {
@@ -370,7 +589,7 @@ function exportQuiz(category) {
             `"${q.category}"`
         ].join(',');
         csv += row + '\n';
-    });
+    };
     
     downloadCSV(csv, `quiz_${category}_${getCurrentDate()}.csv`);
 }
@@ -383,7 +602,6 @@ function exportDetailedResults() {
         return;
     }
     
-    // Create Excel Workbook with styling
     if (typeof XLSX !== 'undefined') {
         exportExcelWithFormatting(results);
     } else {
@@ -396,12 +614,8 @@ function exportExcelWithFormatting(results) {
         const wb = XLSX.utils.book_new();
         const ws_data = [];
         
-        // Add headers
-        const headers = [
-            'Timestamp', 'Score', 'Employee ID', 'Employee Name', 'Score %'
-        ];
+        const headers = ['Timestamp', 'Score', 'Employee ID', 'Employee Name', 'Score %'];
         
-        // Add question headers
         if (results.length > 0) {
             const firstResult = results[0];
             const quizData = getQuizDataForResult(firstResult);
@@ -412,7 +626,6 @@ function exportExcelWithFormatting(results) {
         
         ws_data.push(headers);
         
-        // Add data rows
         results.forEach(result => {
             const quizData = getQuizDataForResult(result);
             const scorePercent = Math.round(result.percentage);
@@ -425,13 +638,11 @@ function exportExcelWithFormatting(results) {
                 `${scorePercent}%`
             ];
             
-            // Add answers with formatting info
             result.answers.forEach((answer, index) => {
                 const question = quizData[index];
                 if (question) {
                     const answerText = answer === null ? 'Skipped' : question.options[answer];
                     const isWrong = answer !== null && answer !== question.correct;
-                    // Mark wrong answers with * prefix for Excel conditional formatting
                     row.push(isWrong ? `*${answerText}` : answerText);
                 } else {
                     row.push('N/A');
@@ -443,15 +654,13 @@ function exportExcelWithFormatting(results) {
         
         const ws = XLSX.utils.aoa_to_sheet(ws_data);
         
-        // Add conditional formatting for wrong answers (red color)
         if (!ws['!conditionalFormats']) ws['!conditionalFormats'] = [];
         
-        // Apply red color to cells starting with *
         if (results.length > 0) {
             const firstResult = results[0];
             const quizData = getQuizDataForResult(firstResult);
             quizData.forEach((_, index) => {
-                const col = XLSX.utils.encode_col(5 + index); // Start from column F (5)
+                const col = XLSX.utils.encode_col(5 + index);
                 ws['!conditionalFormats'].push({
                     ref: `${col}2:${col}${results.length + 1}`,
                     rules: [
@@ -470,7 +679,7 @@ function exportExcelWithFormatting(results) {
         XLSX.writeFile(wb, `detailed_results_${getCurrentDate()}.xlsx`);
         
     } catch (error) {
-        console.error('Excel export failed, falling back to CSV:', error);
+        console.error('Excel export failed:', error);
         exportCSVWithFormatting(results);
     }
 }
@@ -478,7 +687,6 @@ function exportExcelWithFormatting(results) {
 function exportCSVWithFormatting(results) {
     let csv = 'Timestamp,Score,Employee ID,Employee Name';
     
-    // Add question headers
     if (results.length > 0) {
         const firstResult = results[0];
         const quizData = getQuizDataForResult(firstResult);
@@ -495,13 +703,11 @@ function exportCSVWithFormatting(results) {
         
         let row = `"${new Date(result.timestamp).toLocaleString()}","${result.score}/${result.total}","${result.employeeId}","${result.employeeName}"`;
         
-        // Add answers - wrong answers will be marked in Excel with conditional formatting
         result.answers.forEach((answer, index) => {
             const question = quizData[index];
             if (question) {
                 const answerText = answer === null ? 'Skipped' : question.options[answer];
                 const isWrong = answer !== null && answer !== question.correct;
-                // For CSV, we'll add a comment that can be used for Excel conditional formatting
                 row += `,"${isWrong ? 'WRONG: ' + answerText : answerText}"`;
             } else {
                 row += ',"N/A"';
@@ -514,21 +720,15 @@ function exportCSVWithFormatting(results) {
     
     downloadCSV(csv, `detailed_results_${getCurrentDate()}.csv`);
 }
+
 function getQuizDataForResult(result) {
-    // Priority 1: Use quiz data saved with the result
     if (result.quizData && result.quizData.length > 0) {
         return result.quizData;
-    }
-    // Priority 2: Find quiz data by category
-    else if (result.quiz && allQuizzes[result.quiz]) {
+    } else if (result.quiz && allQuizzes[result.quiz]) {
         return allQuizzes[result.quiz];
-    }
-    // Priority 3: Use current active quiz
-    else if (currentQuizData && currentQuizData.length > 0) {
+    } else if (currentQuizData && currentQuizData.length > 0) {
         return currentQuizData;
-    }
-    // Priority 4: Use default quiz
-    else {
+    } else {
         return defaultQuizData;
     }
 }
@@ -548,7 +748,6 @@ function getCurrentDate() {
     return new Date().toISOString().split('T')[0];
 }
 
-// Results Management Functions
 function loadAllResults() {
     const results = JSON.parse(localStorage.getItem('allQuizResults') || '[]');
     updateStats(results);
@@ -611,9 +810,6 @@ function viewDetails(index) {
     }
     
     const result = results[index];
-    console.log('Viewing details for result:', result);
-    
-    // Get the correct quiz data for this specific result
     const quizData = getQuizDataForResult(result);
     
     const modalContent = document.getElementById('modalContent');
@@ -629,7 +825,6 @@ function viewDetails(index) {
             <div class="detail-item"><strong>Status:</strong> <span class="${(result.percentage || 0) >= 60 ? 'status-pass' : 'status-fail'}">${(result.percentage || 0) >= 60 ? 'PASSED' : 'FAILED'}</span></div>
     `;
     
-    // Check if we have answers and quiz data
     if (result.answers && Array.isArray(result.answers) && quizData.length > 0) {
         detailsHTML += `<h3 style="margin-top: 20px;">Question-wise Analysis:</h3>`;
         
@@ -664,7 +859,7 @@ function viewDetails(index) {
     } else {
         detailsHTML += `
             <div style="margin-top: 20px; padding: 15px; background: #f8d7da; color: #721c24; border-radius: 5px;">
-                <strong>Data Issue:</strong> Unable to display question details. Quiz data may be missing or corrupted.
+                <strong>Data Issue:</strong> Quiz data is missing for this result.
             </div>
         `;
     }
