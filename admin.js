@@ -72,27 +72,20 @@ function handleFileUpload() {
         return;
     }
     
-    if (!file.name.endsWith('.csv')) {
-        showUploadStatus('Please upload a CSV file.', 'error');
-        return;
-    }
-    
     const reader = new FileReader();
     
     reader.onload = function(e) {
         try {
-            const content = e.target.result;
-            const questions = parseCSVContent(content);
-            
-            if (questions.length > 0) {
-                // NEW: Don't merge - create separate quiz sets
-                saveQuestionsAsSeparateSet(questions);
-                showUploadStatus(`Successfully created new quiz set with ${questions.length} questions!`, 'success');
-                loadQuizList();
-                fileInput.value = '';
-                document.getElementById('fileName').textContent = '';
+            if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                // Handle Excel files
+                parseExcelFile(e.target.result, file);
+            } else if (file.name.endsWith('.csv')) {
+                // Handle CSV files
+                const content = e.target.result;
+                const questions = parseCSVContent(content);
+                processQuestions(questions);
             } else {
-                showUploadStatus('No valid questions found in the file.', 'error');
+                showUploadStatus('Unsupported file format. Please upload CSV or Excel files.', 'error');
             }
         } catch (error) {
             showUploadStatus('Error reading file: ' + error.message, 'error');
@@ -103,35 +96,126 @@ function handleFileUpload() {
         showUploadStatus('Error reading file.', 'error');
     };
     
-    reader.readAsText(file);
+    // Read as ArrayBuffer for Excel, Text for CSV
+    if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        reader.readAsArrayBuffer(file);
+    } else {
+        reader.readAsText(file);
+    }
 }
 
-// NEW: Save as separate quiz set instead of merging
-function saveQuestionsAsSeparateSet(questions) {
-    const questionsByCategory = {};
-    
-    questions.forEach(q => {
-        if (!questionsByCategory[q.category]) {
-            questionsByCategory[q.category] = [];
-        }
-        questionsByCategory[q.category].push(q);
-    });
-    
-    // Create unique names for each category to avoid merging
-    Object.keys(questionsByCategory).forEach(category => {
-        let uniqueCategoryName = category;
-        let counter = 1;
-        
-        // If category already exists, create unique name
-        while (allQuizzes[uniqueCategoryName]) {
-            uniqueCategoryName = `${category}_${counter}`;
-            counter++;
+// NEW: Excel file parsing using SheetJS library
+function parseExcelFile(arrayBuffer, file) {
+    try {
+        // Check if SheetJS is available
+        if (typeof XLSX === 'undefined') {
+            showUploadStatus('Excel support requires SheetJS library. Please use CSV format or include SheetJS.', 'error');
+            return;
         }
         
-        allQuizzes[uniqueCategoryName] = questionsByCategory[category];
-    });
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        // Convert to JSON
+        const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        if (data.length < 2) {
+            showUploadStatus('Excel file must have at least a header row and one data row.', 'error');
+            return;
+        }
+        
+        const questions = parseExcelData(data);
+        processQuestions(questions);
+        
+    } catch (error) {
+        showUploadStatus('Error parsing Excel file: ' + error.message, 'error');
+    }
+}
+
+function parseExcelData(data) {
+    const questions = [];
+    const headers = data[0].map(h => h ? h.toString().toLowerCase().trim() : '');
     
-    localStorage.setItem('allQuizzes', JSON.stringify(allQuizzes));
+    // Find column indices
+    const questionIndex = headers.findIndex(h => h.includes('question'));
+    const option1Index = headers.findIndex(h => h.includes('option1'));
+    const option2Index = headers.findIndex(h => h.includes('option2'));
+    const option3Index = headers.findIndex(h => h.includes('option3'));
+    const option4Index = headers.findIndex(h => h.includes('option4'));
+    const correctIndex = headers.findIndex(h => h.includes('correct'));
+    const categoryIndex = headers.findIndex(h => h.includes('category'));
+    
+    if (questionIndex === -1 || option1Index === -1 || correctIndex === -1) {
+        throw new Error('Required columns (question, option1, correct_answer) not found in Excel file.');
+    }
+    
+    // Process data rows
+    for (let i = 1; i < data.length; i++) {
+        const row = data[i];
+        if (!row || row.length === 0) continue;
+        
+        try {
+            const question = {
+                question: (row[questionIndex] || '').toString().trim(),
+                options: [
+                    (row[option1Index] || '').toString().trim(),
+                    (row[option2Index] || '').toString().trim(),
+                    (row[option3Index] || '').toString().trim(),
+                    (row[option4Index] || '').toString().trim()
+                ],
+                correct: parseInt(row[correctIndex]) - 1,
+                category: (row[categoryIndex] || 'General').toString().trim()
+            };
+            
+            // Validate question
+            if (question.question && 
+                question.options[0] && // At least option1 should exist
+                !isNaN(question.correct) && 
+                question.correct >= 0 && question.correct <= 3) {
+                questions.push(question);
+            }
+        } catch (error) {
+            console.warn('Skipping invalid Excel row:', row);
+        }
+    }
+    
+    return questions;
+}
+
+function processQuestions(questions) {
+    if (questions.length > 0) {
+        saveQuestionsAsSeparateSet(questions);
+        showUploadStatus(`Successfully uploaded ${questions.length} questions from file!`, 'success');
+        loadQuizList();
+        document.getElementById('questionsFile').value = '';
+        document.getElementById('fileName').textContent = '';
+    } else {
+        showUploadStatus('No valid questions found in the file.', 'error');
+    }
+}
+
+// NEW: Simple Excel parser without external libraries (fallback)
+function parseExcelSimple(arrayBuffer) {
+    try {
+        // Basic Excel parsing for .xls files (BIFF format)
+        const dataView = new DataView(arrayBuffer);
+        
+        // Check for Excel signature
+        const signature = dataView.getUint16(0);
+        if (signature === 0x809 || signature === 0x809) { // Basic Excel check
+            showUploadStatus('Advanced Excel parsing requires SheetJS library. Please use CSV or install SheetJS.', 'info');
+            return [];
+        }
+        
+        // For .xlsx (ZIP-based), we can't parse without external lib
+        showUploadStatus('Excel parsing requires SheetJS library. Please convert to CSV or include SheetJS.', 'info');
+        return [];
+        
+    } catch (error) {
+        showUploadStatus('Error parsing Excel file. Please use CSV format.', 'error');
+        return [];
+    }
 }
 
 function parseCSVContent(content) {
@@ -139,12 +223,12 @@ function parseCSVContent(content) {
     const questions = [];
     
     if (lines.length < 2) {
-        throw new Error('CSV file must have at least a header row and one data row');
+        throw new Error('File must have at least a header row and one data row');
     }
     
     const header = lines[0].toLowerCase();
-    if (!header.includes('question') || !header.includes('option1') || !header.includes('correct_answer')) {
-        throw new Error('Invalid CSV format. Please check the column headers.');
+    if (!header.includes('question') || !header.includes('option1') || !header.includes('correct')) {
+        throw new Error('Invalid file format. Required columns: question, option1, correct_answer');
     }
     
     for (let i = 1; i < lines.length; i++) {
@@ -153,24 +237,24 @@ function parseCSVContent(content) {
         
         const columns = parseCSVLine(line);
         
-        if (columns.length >= 7) {
+        if (columns.length >= 3) { // At least question, option1, correct_answer
             try {
                 const question = {
                     question: columns[0].replace(/^"|"$/g, '').trim(),
                     options: [
                         columns[1].replace(/^"|"$/g, '').trim(),
-                        columns[2].replace(/^"|"$/g, '').trim(),
-                        columns[3].replace(/^"|"$/g, '').trim(),
-                        columns[4].replace(/^"|"$/g, '').trim()
+                        (columns[2] || '').replace(/^"|"$/g, '').trim(),
+                        (columns[3] || '').replace(/^"|"$/g, '').trim(),
+                        (columns[4] || '').replace(/^"|"$/g, '').trim()
                     ],
                     correct: parseInt(columns[5]) - 1,
-                    category: columns[6].replace(/^"|"$/g, '').trim() || 'General'
+                    category: (columns[6] || 'General').replace(/^"|"$/g, '').trim()
                 };
                 
                 if (question.question && 
-                    question.options.every(opt => opt) &&
-                    question.correct >= 0 && question.correct <= 3 && 
-                    question.category) {
+                    question.options[0] && // At least one option
+                    !isNaN(question.correct) && 
+                    question.correct >= 0 && question.correct <= 3) {
                     questions.push(question);
                 }
             } catch (error) {
@@ -202,6 +286,31 @@ function parseCSVLine(line) {
     
     result.push(current);
     return result;
+}
+
+function saveQuestionsAsSeparateSet(questions) {
+    const questionsByCategory = {};
+    
+    questions.forEach(q => {
+        if (!questionsByCategory[q.category]) {
+            questionsByCategory[q.category] = [];
+        }
+        questionsByCategory[q.category].push(q);
+    });
+    
+    Object.keys(questionsByCategory).forEach(category => {
+        let uniqueCategoryName = category;
+        let counter = 1;
+        
+        while (allQuizzes[uniqueCategoryName]) {
+            uniqueCategoryName = `${category}_${counter}`;
+            counter++;
+        }
+        
+        allQuizzes[uniqueCategoryName] = questionsByCategory[category];
+    });
+    
+    localStorage.setItem('allQuizzes', JSON.stringify(allQuizzes));
 }
 
 function showUploadStatus(message, type) {
@@ -251,18 +360,18 @@ function setActiveQuiz(category) {
         localStorage.setItem('activeQuiz', category);
         currentQuizData = allQuizzes[category];
         localStorage.setItem('currentQuiz', JSON.stringify(currentQuizData));
-        showUploadStatus(`"${category}" quiz is now active! Employees will see this quiz.`, 'success');
+        showUploadStatus(`"${category}" quiz is now active!`, 'success');
         loadQuizList();
     }
 }
 
 function deleteQuiz(category) {
     if (Object.keys(allQuizzes).length <= 1) {
-        showUploadStatus('Cannot delete the only quiz. Create a new quiz first.', 'error');
+        showUploadStatus('Cannot delete the only quiz.', 'error');
         return;
     }
     
-    if (confirm(`Are you sure you want to delete the "${category}" quiz? This action cannot be undone.`)) {
+    if (confirm(`Delete the "${category}" quiz?`)) {
         delete allQuizzes[category];
         localStorage.setItem('allQuizzes', JSON.stringify(allQuizzes));
         
@@ -273,7 +382,7 @@ function deleteQuiz(category) {
         }
         
         loadQuizList();
-        showUploadStatus(`"${category}" quiz has been deleted.`, 'info');
+        showUploadStatus(`"${category}" quiz deleted.`, 'info');
     }
 }
 
@@ -299,7 +408,6 @@ function exportQuiz(category) {
     downloadCSV(csv, `quiz_${category}_${getCurrentDate()}.csv`);
 }
 
-// NEW: Enhanced export with question-wise results
 function exportDetailedResults() {
     const results = JSON.parse(localStorage.getItem('allQuizResults') || '[]');
     
@@ -310,7 +418,6 @@ function exportDetailedResults() {
     
     let csv = 'Employee ID,Employee Name,Quiz Category,Total Score,Percentage,Status,Date';
     
-    // Add question columns
     if (results.length > 0) {
         const firstResult = results[0];
         for (let i = 1; i <= firstResult.answers.length; i++) {
@@ -327,7 +434,6 @@ function exportDetailedResults() {
         
         let row = `"${result.employeeId}","${result.employeeName}","${result.quiz}","${result.score}/${result.total}","${result.percentage}%","${status}","${date}"`;
         
-        // Add question-wise details
         result.answers.forEach((answer, index) => {
             const question = quizData[index];
             if (question) {
@@ -382,9 +488,6 @@ function updateStats(results) {
         const passCount = results.filter(result => result.percentage >= 60).length;
         const passRate = Math.round((passCount / totalAttempts) * 100);
         document.getElementById('passRate').textContent = passRate + '%';
-    } else {
-        document.getElementById('averageScore').textContent = '0%';
-        document.getElementById('passRate').textContent = '0%';
     }
 }
 
@@ -399,7 +502,6 @@ function displayResults(results) {
     }
     
     noResults.style.display = 'none';
-    
     results.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     
     resultsBody.innerHTML = results.map((result, index) => `
@@ -429,31 +531,15 @@ function viewDetails(index) {
     const modalContent = document.getElementById('modalContent');
     let detailsHTML = `
         <div class="result-details">
-            <div class="detail-item">
-                <strong>Employee ID:</strong> ${result.employeeId}
-            </div>
-            <div class="detail-item">
-                <strong>Name:</strong> ${result.employeeName}
-            </div>
-            <div class="detail-item">
-                <strong>Score:</strong> ${result.score}/${result.total}
-            </div>
-            <div class="detail-item">
-                <strong>Percentage:</strong> ${result.percentage}%
-            </div>
-            <div class="detail-item">
-                <strong>Quiz:</strong> ${result.quiz || 'Technical'}
-            </div>
-            <div class="detail-item">
-                <strong>Date:</strong> ${new Date(result.timestamp).toLocaleString()}
-            </div>
-            <div class="detail-item">
-                <strong>Status:</strong> <span class="${result.percentage >= 60 ? 'status-pass' : 'status-fail'}">
-                    ${result.percentage >= 60 ? 'PASSED' : 'FAILED'}
-                </span>
-            </div>
+            <div class="detail-item"><strong>Employee ID:</strong> ${result.employeeId}</div>
+            <div class="detail-item"><strong>Name:</strong> ${result.employeeName}</div>
+            <div class="detail-item"><strong>Score:</strong> ${result.score}/${result.total}</div>
+            <div class="detail-item"><strong>Percentage:</strong> ${result.percentage}%</div>
+            <div class="detail-item"><strong>Quiz:</strong> ${result.quiz}</div>
+            <div class="detail-item"><strong>Date:</strong> ${new Date(result.timestamp).toLocaleString()}</div>
+            <div class="detail-item"><strong>Status:</strong> <span class="${result.percentage >= 60 ? 'status-pass' : 'status-fail'}">${result.percentage >= 60 ? 'PASSED' : 'FAILED'}</span></div>
             
-            <h3 style="margin-top: 20px; margin-bottom: 15px;">Question-wise Analysis:</h3>
+            <h3 style="margin-top: 20px;">Question-wise Analysis:</h3>
     `;
     
     result.answers.forEach((answer, qIndex) => {
@@ -468,12 +554,8 @@ function viewDetails(index) {
         detailsHTML += `
             <div class="question-detail" style="border-left-color: ${getStatusColor(status)}">
                 <strong>Q${qIndex + 1}:</strong> ${question.question}<br>
-                <span class="answer-${status}">
-                    <strong>Selected:</strong> ${answerText}
-                </span><br>
-                <span class="answer-correct">
-                    <strong>Correct Answer:</strong> ${correctAnswer}
-                </span><br>
+                <span class="answer-${status}"><strong>Selected:</strong> ${answerText}</span><br>
+                <span class="answer-correct"><strong>Correct:</strong> ${correctAnswer}</span><br>
                 <strong>Status:</strong> <span class="status-${status}">${status.toUpperCase()}</span>
             </div>
         `;
@@ -481,7 +563,6 @@ function viewDetails(index) {
     
     detailsHTML += `</div>`;
     modalContent.innerHTML = detailsHTML;
-    
     document.getElementById('resultModal').style.display = 'block';
 }
 
@@ -510,7 +591,7 @@ function setupModal() {
 }
 
 function deleteResult(index) {
-    if (confirm('Are you sure you want to delete this result?')) {
+    if (confirm('Delete this result?')) {
         const results = JSON.parse(localStorage.getItem('allQuizResults') || '[]');
         results.splice(index, 1);
         localStorage.setItem('allQuizResults', JSON.stringify(results));
@@ -519,12 +600,12 @@ function deleteResult(index) {
 }
 
 function clearAllResults() {
-    if (confirm('Are you sure you want to delete ALL results? This action cannot be undone.')) {
+    if (confirm('Delete ALL results?')) {
         localStorage.removeItem('allQuizResults');
         loadAllResults();
     }
 }
 
 function exportToCSV() {
-    exportDetailedResults(); // Now uses the detailed export
+    exportDetailedResults();
 }
