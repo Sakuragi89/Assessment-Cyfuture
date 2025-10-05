@@ -9,12 +9,6 @@ const defaultQuizData = [
         options: ["Hyper Text Markup Language", "High Tech Modern Language", "Hyper Transfer Markup Language", "Home Tool Markup Language"],
         correct: 0,
         category: "Technical"
-    },
-    {
-        question: "Which programming language is known as the 'language of the web'?",
-        options: ["Python", "Java", "JavaScript", "C++"],
-        correct: 2,
-        category: "Technical"
     }
 ];
 
@@ -77,10 +71,8 @@ function handleFileUpload() {
     reader.onload = function(e) {
         try {
             if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-                // Handle Excel files
                 parseExcelFile(e.target.result, file);
             } else if (file.name.endsWith('.csv')) {
-                // Handle CSV files
                 const content = e.target.result;
                 const questions = parseCSVContent(content);
                 processQuestions(questions);
@@ -96,7 +88,6 @@ function handleFileUpload() {
         showUploadStatus('Error reading file.', 'error');
     };
     
-    // Read as ArrayBuffer for Excel, Text for CSV
     if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
         reader.readAsArrayBuffer(file);
     } else {
@@ -104,20 +95,16 @@ function handleFileUpload() {
     }
 }
 
-// NEW: Excel file parsing using SheetJS library
 function parseExcelFile(arrayBuffer, file) {
     try {
-        // Check if SheetJS is available
         if (typeof XLSX === 'undefined') {
-            showUploadStatus('Excel support requires SheetJS library. Please use CSV format or include SheetJS.', 'error');
+            showUploadStatus('Excel support requires SheetJS library. Please use CSV format.', 'error');
             return;
         }
         
         const workbook = XLSX.read(arrayBuffer, { type: 'array' });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-        
-        // Convert to JSON
         const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
         
         if (data.length < 2) {
@@ -137,7 +124,6 @@ function parseExcelData(data) {
     const questions = [];
     const headers = data[0].map(h => h ? h.toString().toLowerCase().trim() : '');
     
-    // Find column indices
     const questionIndex = headers.findIndex(h => h.includes('question'));
     const option1Index = headers.findIndex(h => h.includes('option1'));
     const option2Index = headers.findIndex(h => h.includes('option2'));
@@ -147,10 +133,9 @@ function parseExcelData(data) {
     const categoryIndex = headers.findIndex(h => h.includes('category'));
     
     if (questionIndex === -1 || option1Index === -1 || correctIndex === -1) {
-        throw new Error('Required columns (question, option1, correct_answer) not found in Excel file.');
+        throw new Error('Required columns (question, option1, correct_answer) not found.');
     }
     
-    // Process data rows
     for (let i = 1; i < data.length; i++) {
         const row = data[i];
         if (!row || row.length === 0) continue;
@@ -168,9 +153,8 @@ function parseExcelData(data) {
                 category: (row[categoryIndex] || 'General').toString().trim()
             };
             
-            // Validate question
             if (question.question && 
-                question.options[0] && // At least option1 should exist
+                question.options[0] &&
                 !isNaN(question.correct) && 
                 question.correct >= 0 && question.correct <= 3) {
                 questions.push(question);
@@ -186,35 +170,12 @@ function parseExcelData(data) {
 function processQuestions(questions) {
     if (questions.length > 0) {
         saveQuestionsAsSeparateSet(questions);
-        showUploadStatus(`Successfully uploaded ${questions.length} questions from file!`, 'success');
+        showUploadStatus(`Successfully uploaded ${questions.length} questions!`, 'success');
         loadQuizList();
         document.getElementById('questionsFile').value = '';
         document.getElementById('fileName').textContent = '';
     } else {
-        showUploadStatus('No valid questions found in the file.', 'error');
-    }
-}
-
-// NEW: Simple Excel parser without external libraries (fallback)
-function parseExcelSimple(arrayBuffer) {
-    try {
-        // Basic Excel parsing for .xls files (BIFF format)
-        const dataView = new DataView(arrayBuffer);
-        
-        // Check for Excel signature
-        const signature = dataView.getUint16(0);
-        if (signature === 0x809 || signature === 0x809) { // Basic Excel check
-            showUploadStatus('Advanced Excel parsing requires SheetJS library. Please use CSV or install SheetJS.', 'info');
-            return [];
-        }
-        
-        // For .xlsx (ZIP-based), we can't parse without external lib
-        showUploadStatus('Excel parsing requires SheetJS library. Please convert to CSV or include SheetJS.', 'info');
-        return [];
-        
-    } catch (error) {
-        showUploadStatus('Error parsing Excel file. Please use CSV format.', 'error');
-        return [];
+        showUploadStatus('No valid questions found.', 'error');
     }
 }
 
@@ -237,7 +198,7 @@ function parseCSVContent(content) {
         
         const columns = parseCSVLine(line);
         
-        if (columns.length >= 3) { // At least question, option1, correct_answer
+        if (columns.length >= 3) {
             try {
                 const question = {
                     question: columns[0].replace(/^"|"$/g, '').trim(),
@@ -252,7 +213,7 @@ function parseCSVContent(content) {
                 };
                 
                 if (question.question && 
-                    question.options[0] && // At least one option
+                    question.options[0] &&
                     !isNaN(question.correct) && 
                     question.correct >= 0 && question.correct <= 3) {
                     questions.push(question);
@@ -344,7 +305,7 @@ function loadQuizList() {
                 <button class="btn btn-primary" onclick="setActiveQuiz('${category}')">
                     ${category === activeQuiz ? 'Active' : 'Set Active'}
                 </button>
-                <button class="btn btn-warning" onclick="exportQuiz('${category}')">Export</button>
+                <button class="btn btn-warning" onclick="exportQuiz('${category}')">Export Quiz</button>
                 <button class="btn btn-danger" onclick="deleteQuiz('${category}')">Delete</button>
             </div>
         `;
@@ -408,6 +369,7 @@ function exportQuiz(category) {
     downloadCSV(csv, `quiz_${category}_${getCurrentDate()}.csv`);
 }
 
+// NEW: Custom Export Format with Red Highlighting for Wrong Answers
 function exportDetailedResults() {
     const results = JSON.parse(localStorage.getItem('allQuizResults') || '[]');
     
@@ -416,38 +378,128 @@ function exportDetailedResults() {
         return;
     }
     
-    let csv = 'Employee ID,Employee Name,Quiz Category,Total Score,Percentage,Status,Date';
+    // Create Excel Workbook with styling
+    if (typeof XLSX !== 'undefined') {
+        exportExcelWithFormatting(results);
+    } else {
+        exportCSVWithFormatting(results);
+    }
+}
+
+function exportExcelWithFormatting(results) {
+    try {
+        const wb = XLSX.utils.book_new();
+        const ws_data = [];
+        
+        // Add headers
+        const headers = [
+            'Timestamp', 'Score', 'Employee ID', 'Employee Name', 'Score %'
+        ];
+        
+        // Add question headers
+        if (results.length > 0) {
+            const firstResult = results[0];
+            const quizData = allQuizzes[firstResult.quiz] || [];
+            quizData.forEach((q, index) => {
+                headers.push(q.question);
+            });
+        }
+        
+        ws_data.push(headers);
+        
+        // Add data rows
+        results.forEach(result => {
+            const quizData = allQuizzes[result.quiz] || [];
+            const scorePercent = Math.round(result.percentage);
+            
+            const row = [
+                new Date(result.timestamp).toLocaleString(),
+                `${result.score}/${result.total}`,
+                result.employeeId,
+                result.employeeName,
+                `${scorePercent}%`
+            ];
+            
+            // Add answers with formatting info
+            result.answers.forEach((answer, index) => {
+                const question = quizData[index];
+                if (question) {
+                    const answerText = answer === null ? 'Skipped' : question.options[answer];
+                    const isWrong = answer !== null && answer !== question.correct;
+                    // Mark wrong answers with * prefix for Excel conditional formatting
+                    row.push(isWrong ? `*${answerText}` : answerText);
+                } else {
+                    row.push('N/A');
+                }
+            });
+            
+            ws_data.push(row);
+        });
+        
+        const ws = XLSX.utils.aoa_to_sheet(ws_data);
+        
+        // Add conditional formatting for wrong answers (red color)
+        if (!ws['!conditionalFormats']) ws['!conditionalFormats'] = [];
+        
+        // Apply red color to cells starting with *
+        quizData.forEach((_, index) => {
+            const col = XLSX.utils.encode_col(5 + index); // Start from column F (5)
+            ws['!conditionalFormats'].push({
+                ref: `${col}2:${col}${results.length + 1}`,
+                rules: [
+                    {
+                        type: 'containsText',
+                        operator: 'containsText',
+                        text: '*',
+                        style: { fill: { fgColor: { rgb: 'FFCCCC' } }, font: { color: { rgb: 'FF0000' } } }
+                    }
+                ]
+            });
+        });
+        
+        XLSX.utils.book_append_sheet(wb, ws, 'Results');
+        XLSX.writeFile(wb, `detailed_results_${getCurrentDate()}.xlsx`);
+        
+    } catch (error) {
+        console.error('Excel export failed, falling back to CSV:', error);
+        exportCSVWithFormatting(results);
+    }
+}
+
+function exportCSVWithFormatting(results) {
+    let csv = 'Timestamp,Score,Employee ID,Employee Name';
     
+    // Add question headers
     if (results.length > 0) {
         const firstResult = results[0];
-        for (let i = 1; i <= firstResult.answers.length; i++) {
-            csv += `,Q${i} Selected,Q${i} Correct,Q${i} Status`;
-        }
+        const quizData = allQuizzes[firstResult.quiz] || [];
+        quizData.forEach((q, index) => {
+            csv += `,"${q.question}"`;
+        });
     }
     
-    csv += '\n';
+    csv += ',Score %\n';
     
     results.forEach(result => {
         const quizData = allQuizzes[result.quiz] || [];
-        const status = result.percentage >= 60 ? 'PASS' : 'FAIL';
-        const date = new Date(result.timestamp).toLocaleString();
+        const scorePercent = Math.round(result.percentage);
         
-        let row = `"${result.employeeId}","${result.employeeName}","${result.quiz}","${result.score}/${result.total}","${result.percentage}%","${status}","${date}"`;
+        let row = `"${new Date(result.timestamp).toLocaleString()}","${result.score}/${result.total}","${result.employeeId}","${result.employeeName}"`;
         
+        // Add answers - wrong answers will be marked in Excel with conditional formatting
         result.answers.forEach((answer, index) => {
             const question = quizData[index];
             if (question) {
-                const selectedAnswer = answer === null ? 'Skipped' : question.options[answer];
-                const correctAnswer = question.options[question.correct];
-                const isCorrect = answer === question.correct;
-                const qStatus = answer === null ? 'SKIPPED' : (isCorrect ? 'CORRECT' : 'WRONG');
-                
-                row += `,"${selectedAnswer}","${correctAnswer}","${qStatus}"`;
+                const answerText = answer === null ? 'Skipped' : question.options[answer];
+                const isWrong = answer !== null && answer !== question.correct;
+                // For CSV, we'll add a comment that can be used for Excel conditional formatting
+                row += `,"${isWrong ? 'WRONG: ' + answerText : answerText}"`;
             } else {
-                row += ',N/A,N/A,N/A';
+                row += ',"N/A"';
             }
         });
         
+        row += `,"${scorePercent}%"`;
         csv += row + '\n';
     });
     
