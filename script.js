@@ -197,7 +197,7 @@ function saveQuizResult(employeeId, employeeName, score, percentage, answers, qu
         percentage: percentage,
         answers: answers,
         timestamp: new Date().toISOString(),
-        quiz: quizCategory
+        quiz: quizCategory || (quizData[0]?.category || 'Default') // Ensure quiz category is saved
     };
     
     // Get existing results from localStorage
@@ -209,7 +209,7 @@ function saveQuizResult(employeeId, employeeName, score, percentage, answers, qu
     // Save back to localStorage
     localStorage.setItem('allQuizResults', JSON.stringify(allResults));
     
-    console.log('Result saved for', employeeName, 'in quiz', quizCategory);
+    console.log('Result saved for', employeeName, 'in quiz', result.quiz);
     
     return result;
 }
