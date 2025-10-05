@@ -1,9 +1,10 @@
-// Combined Admin and Employee Quiz Functionality
+// Combined Admin and Employee Quiz Functionality with Password Protection
 let allQuizzes = JSON.parse(localStorage.getItem('allQuizzes')) || {};
 let currentQuizData = [];
 let currentEmployee = null;
 let currentQuestionIndex = 0;
 let userAnswers = [];
+let isAdminLoggedIn = false;
 
 // Default quiz data
 const defaultQuizData = [
@@ -21,17 +22,80 @@ const defaultQuizData = [
     }
 ];
 
+// Admin credentials (you can change these)
+const ADMIN_CREDENTIALS = {
+    username: "admin",
+    password: "admin123" // Change this to your preferred password
+};
+
 // Initialize portal
 document.addEventListener('DOMContentLoaded', function() {
+    checkAdminLogin();
+    setupAdminLogin();
     initializeQuizzes();
+    setupEmployeeQuiz();
+});
+
+function checkAdminLogin() {
+    const savedLogin = localStorage.getItem('adminLoggedIn');
+    if (savedLogin === 'true') {
+        isAdminLoggedIn = true;
+        showMainPortal();
+    } else {
+        showAdminLogin();
+    }
+}
+
+function setupAdminLogin() {
+    const adminLoginForm = document.getElementById('adminLoginForm');
+    if (adminLoginForm) {
+        adminLoginForm.addEventListener('submit', handleAdminLogin);
+    }
+}
+
+function handleAdminLogin(e) {
+    e.preventDefault();
+    const username = document.getElementById('adminUsername').value;
+    const password = document.getElementById('adminPassword').value;
+    
+    if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+        isAdminLoggedIn = true;
+        localStorage.setItem('adminLoggedIn', 'true');
+        showMainPortal();
+    } else {
+        alert('Invalid admin credentials! Please try again.');
+        document.getElementById('adminLoginForm').reset();
+    }
+}
+
+function showAdminLogin() {
+    document.getElementById('adminLoginScreen').classList.remove('hidden');
+    document.getElementById('mainPortal').classList.add('hidden');
+}
+
+function showMainPortal() {
+    document.getElementById('adminLoginScreen').classList.add('hidden');
+    document.getElementById('mainPortal').classList.remove('hidden');
+    
+    // Initialize admin functionality
     loadAllResults();
     setupModal();
     setupUploadFunctionality();
-    setupEmployeeQuiz();
     
     // Show employee tab by default
     openTab('employeeTab');
-});
+}
+
+function showEmployeePortal() {
+    showMainPortal();
+    openTab('employeeTab');
+}
+
+function logout() {
+    isAdminLoggedIn = false;
+    localStorage.removeItem('adminLoggedIn');
+    showAdminLogin();
+}
 
 function initializeQuizzes() {
     if (Object.keys(allQuizzes).length === 0) {
@@ -260,7 +324,7 @@ function updateActiveQuizDisplay() {
     document.getElementById('currentActiveQuiz').textContent = activeQuiz;
 }
 
-// Admin functionality (rest of your existing admin code)
+// Admin functionality
 function setupUploadFunctionality() {
     const uploadBtn = document.getElementById('uploadBtn');
     const fileInput = document.getElementById('questionsFile');
@@ -589,7 +653,7 @@ function exportQuiz(category) {
             `"${q.category}"`
         ].join(',');
         csv += row + '\n';
-    };
+    });
     
     downloadCSV(csv, `quiz_${category}_${getCurrentDate()}.csv`);
 }
