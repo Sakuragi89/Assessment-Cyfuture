@@ -15,12 +15,6 @@ const defaultQuizData = [
         options: ["Python", "Java", "JavaScript", "C++"],
         correct: 2,
         category: "Technical"
-    },
-    {
-        question: "What is the purpose of CSS?",
-        options: ["To structure web content", "To add interactivity to websites", "To style and layout web pages", "To manage databases"],
-        correct: 2,
-        category: "Technical"
     }
 ];
 
@@ -33,7 +27,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeQuizzes() {
-    // Initialize with default quiz if no quizzes exist
     if (Object.keys(allQuizzes).length === 0) {
         allQuizzes = {
             'Technical': defaultQuizData
@@ -41,7 +34,6 @@ function initializeQuizzes() {
         localStorage.setItem('allQuizzes', JSON.stringify(allQuizzes));
     }
     
-    // Set active quiz if not set
     const activeQuiz = localStorage.getItem('activeQuiz') || 'Technical';
     if (allQuizzes[activeQuiz]) {
         currentQuizData = allQuizzes[activeQuiz];
@@ -80,9 +72,8 @@ function handleFileUpload() {
         return;
     }
     
-    // Check file type
     if (!file.name.endsWith('.csv')) {
-        showUploadStatus('Please upload a CSV file. Excel support coming soon.', 'error');
+        showUploadStatus('Please upload a CSV file.', 'error');
         return;
     }
     
@@ -94,8 +85,9 @@ function handleFileUpload() {
             const questions = parseCSVContent(content);
             
             if (questions.length > 0) {
-                saveQuestions(questions);
-                showUploadStatus(`Successfully uploaded ${questions.length} questions!`, 'success');
+                // NEW: Don't merge - create separate quiz sets
+                saveQuestionsAsSeparateSet(questions);
+                showUploadStatus(`Successfully created new quiz set with ${questions.length} questions!`, 'success');
                 loadQuizList();
                 fileInput.value = '';
                 document.getElementById('fileName').textContent = '';
@@ -114,6 +106,34 @@ function handleFileUpload() {
     reader.readAsText(file);
 }
 
+// NEW: Save as separate quiz set instead of merging
+function saveQuestionsAsSeparateSet(questions) {
+    const questionsByCategory = {};
+    
+    questions.forEach(q => {
+        if (!questionsByCategory[q.category]) {
+            questionsByCategory[q.category] = [];
+        }
+        questionsByCategory[q.category].push(q);
+    });
+    
+    // Create unique names for each category to avoid merging
+    Object.keys(questionsByCategory).forEach(category => {
+        let uniqueCategoryName = category;
+        let counter = 1;
+        
+        // If category already exists, create unique name
+        while (allQuizzes[uniqueCategoryName]) {
+            uniqueCategoryName = `${category}_${counter}`;
+            counter++;
+        }
+        
+        allQuizzes[uniqueCategoryName] = questionsByCategory[category];
+    });
+    
+    localStorage.setItem('allQuizzes', JSON.stringify(allQuizzes));
+}
+
 function parseCSVContent(content) {
     const lines = content.split('\n').filter(line => line.trim() !== '');
     const questions = [];
@@ -122,14 +142,11 @@ function parseCSVContent(content) {
         throw new Error('CSV file must have at least a header row and one data row');
     }
     
-    // Validate header
     const header = lines[0].toLowerCase();
-    const expectedHeader = 'question,option1,option2,option3,option4,correct_answer,category';
     if (!header.includes('question') || !header.includes('option1') || !header.includes('correct_answer')) {
         throw new Error('Invalid CSV format. Please check the column headers.');
     }
     
-    // Process data rows
     for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) continue;
@@ -150,7 +167,6 @@ function parseCSVContent(content) {
                     category: columns[6].replace(/^"|"$/g, '').trim() || 'General'
                 };
                 
-                // Validate question data
                 if (question.question && 
                     question.options.every(opt => opt) &&
                     question.correct >= 0 && question.correct <= 3 && 
@@ -186,32 +202,6 @@ function parseCSVLine(line) {
     
     result.push(current);
     return result;
-}
-
-function saveQuestions(questions) {
-    const questionsByCategory = {};
-    
-    questions.forEach(q => {
-        if (!questionsByCategory[q.category]) {
-            questionsByCategory[q.category] = [];
-        }
-        questionsByCategory[q.category].push(q);
-    });
-    
-    Object.keys(questionsByCategory).forEach(category => {
-        if (!allQuizzes[category]) {
-            allQuizzes[category] = [];
-        }
-        allQuizzes[category] = [...allQuizzes[category], ...questionsByCategory[category]];
-    });
-    
-    localStorage.setItem('allQuizzes', JSON.stringify(allQuizzes));
-    
-    // Update active quiz if it's the first category
-    const firstCategory = Object.keys(questionsByCategory)[0];
-    if (firstCategory && !localStorage.getItem('activeQuiz')) {
-        setActiveQuiz(firstCategory);
-    }
 }
 
 function showUploadStatus(message, type) {
@@ -253,7 +243,6 @@ function loadQuizList() {
         quizList.appendChild(quizCard);
     });
     
-    // Update active quiz display
     document.getElementById('activeQuiz').textContent = activeQuiz;
 }
 
@@ -277,7 +266,6 @@ function deleteQuiz(category) {
         delete allQuizzes[category];
         localStorage.setItem('allQuizzes', JSON.stringify(allQuizzes));
         
-        // If deleting active quiz, set another as active
         const activeQuiz = localStorage.getItem('activeQuiz');
         if (activeQuiz === category) {
             const newActive = Object.keys(allQuizzes)[0];
@@ -308,14 +296,71 @@ function exportQuiz(category) {
         csv += row + '\n';
     });
     
+    downloadCSV(csv, `quiz_${category}_${getCurrentDate()}.csv`);
+}
+
+// NEW: Enhanced export with question-wise results
+function exportDetailedResults() {
+    const results = JSON.parse(localStorage.getItem('allQuizResults') || '[]');
+    
+    if (results.length === 0) {
+        alert('No results to export.');
+        return;
+    }
+    
+    let csv = 'Employee ID,Employee Name,Quiz Category,Total Score,Percentage,Status,Date';
+    
+    // Add question columns
+    if (results.length > 0) {
+        const firstResult = results[0];
+        for (let i = 1; i <= firstResult.answers.length; i++) {
+            csv += `,Q${i} Selected,Q${i} Correct,Q${i} Status`;
+        }
+    }
+    
+    csv += '\n';
+    
+    results.forEach(result => {
+        const quizData = allQuizzes[result.quiz] || [];
+        const status = result.percentage >= 60 ? 'PASS' : 'FAIL';
+        const date = new Date(result.timestamp).toLocaleString();
+        
+        let row = `"${result.employeeId}","${result.employeeName}","${result.quiz}","${result.score}/${result.total}","${result.percentage}%","${status}","${date}"`;
+        
+        // Add question-wise details
+        result.answers.forEach((answer, index) => {
+            const question = quizData[index];
+            if (question) {
+                const selectedAnswer = answer === null ? 'Skipped' : question.options[answer];
+                const correctAnswer = question.options[question.correct];
+                const isCorrect = answer === question.correct;
+                const qStatus = answer === null ? 'SKIPPED' : (isCorrect ? 'CORRECT' : 'WRONG');
+                
+                row += `,"${selectedAnswer}","${correctAnswer}","${qStatus}"`;
+            } else {
+                row += ',N/A,N/A,N/A';
+            }
+        });
+        
+        csv += row + '\n';
+    });
+    
+    downloadCSV(csv, `detailed_results_${getCurrentDate()}.csv`);
+}
+
+function downloadCSV(csv, filename) {
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `quiz_${category}_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+}
+
+function getCurrentDate() {
+    return new Date().toISOString().split('T')[0];
 }
 
 // Results Management Functions
@@ -379,10 +424,10 @@ function displayResults(results) {
 function viewDetails(index) {
     const results = JSON.parse(localStorage.getItem('allQuizResults') || '[]');
     const result = results[index];
-    const quizData = allQuizzes[result.quiz] || currentQuizData;
+    const quizData = allQuizzes[result.quiz] || [];
     
     const modalContent = document.getElementById('modalContent');
-    modalContent.innerHTML = `
+    let detailsHTML = `
         <div class="result-details">
             <div class="detail-item">
                 <strong>Employee ID:</strong> ${result.employeeId}
@@ -408,29 +453,45 @@ function viewDetails(index) {
                 </span>
             </div>
             
-            <h3 style="margin-top: 20px; margin-bottom: 15px;">Question-wise Answers:</h3>
-            ${result.answers.map((answer, qIndex) => {
-                const question = quizData[qIndex];
-                if (!question) return '';
-                
-                const isCorrect = answer === question.correct;
-                const answerText = answer === null ? 'Skipped' : question.options[answer];
-                const correctAnswer = question.options[question.correct];
-                
-                return `
-                    <div class="question-detail" style="border-left-color: ${isCorrect ? '#28a745' : '#dc3545'}">
-                        <strong>Q${qIndex + 1}:</strong> ${question.question}<br>
-                        <span class="${isCorrect ? 'answer-correct' : 'answer-wrong'}">
-                            Selected: ${answerText}
-                        </span><br>
-                        ${!isCorrect ? `<span class="answer-correct">Correct: ${correctAnswer}</span>` : ''}
-                    </div>
-                `;
-            }).join('')}
-        </div>
+            <h3 style="margin-top: 20px; margin-bottom: 15px;">Question-wise Analysis:</h3>
     `;
     
+    result.answers.forEach((answer, qIndex) => {
+        const question = quizData[qIndex];
+        if (!question) return;
+        
+        const isCorrect = answer === question.correct;
+        const answerText = answer === null ? 'Skipped' : question.options[answer];
+        const correctAnswer = question.options[question.correct];
+        const status = answer === null ? 'skipped' : (isCorrect ? 'correct' : 'wrong');
+        
+        detailsHTML += `
+            <div class="question-detail" style="border-left-color: ${getStatusColor(status)}">
+                <strong>Q${qIndex + 1}:</strong> ${question.question}<br>
+                <span class="answer-${status}">
+                    <strong>Selected:</strong> ${answerText}
+                </span><br>
+                <span class="answer-correct">
+                    <strong>Correct Answer:</strong> ${correctAnswer}
+                </span><br>
+                <strong>Status:</strong> <span class="status-${status}">${status.toUpperCase()}</span>
+            </div>
+        `;
+    });
+    
+    detailsHTML += `</div>`;
+    modalContent.innerHTML = detailsHTML;
+    
     document.getElementById('resultModal').style.display = 'block';
+}
+
+function getStatusColor(status) {
+    switch(status) {
+        case 'correct': return '#28a745';
+        case 'wrong': return '#dc3545';
+        case 'skipped': return '#6c757d';
+        default: return '#667eea';
+    }
 }
 
 function setupModal() {
@@ -465,49 +526,5 @@ function clearAllResults() {
 }
 
 function exportToCSV() {
-    const results = JSON.parse(localStorage.getItem('allQuizResults') || '[]');
-    
-    if (results.length === 0) {
-        alert('No results to export.');
-        return;
-    }
-    
-    let csv = 'Employee ID,Name,Score,Percentage,Quiz,Status,Date\n';
-    
-    results.forEach(result => {
-        const status = result.percentage >= 60 ? 'PASS' : 'FAIL';
-        const date = new Date(result.timestamp).toLocaleString();
-        csv += `"${result.employeeId}","${result.employeeName}","${result.score}/${result.total}","${result.percentage}%","${result.quiz || 'Technical'}","${status}","${date}"\n`;
-    });
-    
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `quiz_results_${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-}
-// Force update main quiz data
-function refreshMainQuiz() {
-    const activeQuiz = localStorage.getItem('activeQuiz');
-    const allQuizzes = JSON.parse(localStorage.getItem('allQuizzes') || '{}');
-    
-    if (activeQuiz && allQuizzes[activeQuiz]) {
-        localStorage.setItem('currentQuiz', JSON.stringify(allQuizzes[activeQuiz]));
-        console.log('Main quiz refreshed with', allQuizzes[activeQuiz].length, 'questions from', activeQuiz);
-    }
-}
-
-// Call this when setting active quiz
-function setActiveQuiz(category) {
-    if (allQuizzes[category]) {
-        localStorage.setItem('activeQuiz', category);
-        currentQuizData = allQuizzes[category];
-        localStorage.setItem('currentQuiz', JSON.stringify(currentQuizData));
-        refreshMainQuiz();
-        showUploadStatus(`"${category}" quiz is now active!`, 'success');
-        loadQuizList();
-    }
+    exportDetailedResults(); // Now uses the detailed export
 }
