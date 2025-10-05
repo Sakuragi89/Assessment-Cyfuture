@@ -8,181 +8,215 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
-    <div class="admin-container">
-        <header>
-            <h1>🎯 Quiz Management Portal</h1>
-            <p>Manage quizzes and conduct employee assessments</p>
-        </header>
-
-        <!-- Navigation Tabs -->
-        <div class="tabs">
-            <button class="tab-button active" onclick="openTab('employeeTab')">👨‍💼 Employee Quiz</button>
-            <button class="tab-button" onclick="openTab('adminTab')">⚙️ Admin Dashboard</button>
-        </div>
-
-        <!-- Employee Quiz Tab -->
-        <div id="employeeTab" class="tab-content active">
-            <div class="quiz-header">
-                <h2>Employee Assessment</h2>
-                <div class="active-quiz-info">
-                    <strong>Active Quiz:</strong> <span id="currentActiveQuiz">Technical</span>
-                </div>
-            </div>
-
-            <!-- Login Screen -->
-            <div id="employeeLoginScreen">
-                <div class="login-form">
-                    <h3>Enter Your Details</h3>
-                    <form id="employeeLoginForm">
-                        <div class="form-group">
-                            <label for="employeeId">Employee ID</label>
-                            <input type="text" id="employeeId" placeholder="Enter your employee ID" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="employeeName">Full Name</label>
-                            <input type="text" id="employeeName" placeholder="Enter your full name" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Start Assessment</button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Quiz Screen -->
-            <div id="employeeQuizScreen" class="hidden">
-                <div class="quiz-header-bar">
-                    <div class="employee-info">
-                        <strong>Employee:</strong> <span id="currentEmployeeName"></span> | 
-                        <strong>ID:</strong> <span id="currentEmployeeId"></span>
-                    </div>
-                    <div class="quiz-info">
-                        <strong>Quiz:</strong> <span id="currentQuizName"></span> | 
-                        <strong>Progress:</strong> <span id="quizProgress">1/0</span>
-                    </div>
-                </div>
-
-                <div class="quiz-content">
-                    <h3>Assessment Questions</h3>
-                    <div id="questionContainer"></div>
-                    <div class="navigation">
-                        <button id="prevBtn" class="btn btn-secondary">← Previous</button>
-                        <button id="nextBtn" class="btn btn-primary">Next →</button>
-                        <button id="submitBtn" class="btn btn-success hidden">Submit Assessment</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Results Screen -->
-            <div id="employeeResultScreen" class="hidden">
-                <div class="result-success">
-                    <div class="success-icon">✅</div>
-                    <h2>Assessment Submitted Successfully</h2>
-                    <p>Your results will be reviewed and communicated to you through the appropriate channels.</p>
-                    <button onclick="restartEmployeeQuiz()" class="btn btn-primary">Take Another Assessment</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Admin Dashboard Tab -->
-        <div id="adminTab" class="tab-content">
-            <!-- Upload Section -->
-            <div class="upload-section">
-                <h2>📤 Upload Questions from Excel/CSV</h2>
+    <!-- Admin Login Screen -->
+    <div id="adminLoginScreen" class="login-screen">
+        <div class="login-container">
+            <div class="login-card">
+                <h1>🔒 Admin Portal</h1>
+                <p>Enter admin credentials to access the management dashboard</p>
                 
-                <div class="upload-instructions">
-                    <h3>File Format Instructions:</h3>
-                    <p>Create a CSV/Excel file with these columns:</p>
-                    <ul>
-                        <li><strong>question</strong> - The question text</li>
-                        <li><strong>option1, option2, option3, option4</strong> - The four answer options</li>
-                        <li><strong>correct_answer</strong> - Number (1-4) of the correct option</li>
-                        <li><strong>category</strong> - Quiz category (e.g., "Technical", "General")</li>
-                    </ul>
-                    
-                    <div class="format-example">
-                        <strong>Example:</strong>
-                        <pre>question,option1,option2,option3,option4,correct_answer,category
-"What is phishing?","Fishing online","Email scam","Social media","Gaming",2,"Cybersecurity"</pre>
+                <form id="adminLoginForm">
+                    <div class="form-group">
+                        <label for="adminUsername">Username</label>
+                        <input type="text" id="adminUsername" placeholder="Enter admin username" required>
                     </div>
-                </div>
-
-                <div class="upload-area">
-                    <input type="file" id="questionsFile" accept=".csv,.xlsx,.xls" class="file-input">
-                    <label for="questionsFile" class="file-label">
-                        <div class="upload-icon">📁</div>
-                        <span>Choose CSV or Excel File</span>
-                        <span id="fileName" class="file-name"></span>
-                    </label>
-                    <button id="uploadBtn" class="btn btn-primary">Upload Questions</button>
-                </div>
-
-                <div id="uploadStatus" class="upload-status hidden"></div>
-
-                <div class="quiz-management">
-                    <h3>Available Quizzes</h3>
-                    <div id="quizList" class="quiz-list">
-                        <!-- Quizzes will be listed here -->
+                    <div class="form-group">
+                        <label for="adminPassword">Password</label>
+                        <input type="password" id="adminPassword" placeholder="Enter admin password" required>
                     </div>
+                    <button type="submit" class="btn btn-primary">Login to Admin Portal</button>
+                </form>
+                
+                <div class="employee-access">
+                    <p>For employee assessment, use the button below:</p>
+                    <button onclick="showEmployeePortal()" class="btn btn-secondary">👨‍💼 Go to Employee Assessment</button>
                 </div>
-            </div>
-
-            <div class="stats">
-                <div class="stat-card">
-                    <h3 id="totalAttempts">0</h3>
-                    <p>Total Attempts</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="averageScore">0%</h3>
-                    <p>Average Score</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="passRate">0%</h3>
-                    <p>Pass Rate (≥60%)</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="activeQuiz">Default</h3>
-                    <p>Active Quiz</p>
-                </div>
-            </div>
-
-            <div class="results-section">
-                <h2>All Quiz Results</h2>
-                <div class="controls">
-                    <button onclick="exportToCSV()" class="btn btn-primary">📥 Export Results to CSV</button>
-                    <button onclick="clearAllResults()" class="btn btn-danger">🗑️ Clear All Results</button>
-                </div>
-                <div class="table-container">
-                    <table id="resultsTable">
-                        <thead>
-                            <tr>
-                                <th>Employee ID</th>
-                                <th>Name</th>
-                                <th>Score</th>
-                                <th>Percentage</th>
-                                <th>Quiz Category</th>
-                                <th>Date & Time</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="resultsBody">
-                            <!-- Results will be loaded here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="no-results" id="noResults">
-                <p>No quiz results found. Employees need to take the quiz first.</p>
             </div>
         </div>
     </div>
 
-    <!-- Result Details Modal -->
-    <div id="resultModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Detailed Result</h2>
-            <div id="modalContent"></div>
+    <!-- Main Portal (Hidden until login) -->
+    <div id="mainPortal" class="hidden">
+        <div class="admin-container">
+            <header>
+                <h1>🎯 Quiz Management Portal</h1>
+                <p>Manage quizzes and conduct employee assessments</p>
+                <div class="admin-info">
+                    <span>Welcome, Admin</span>
+                    <button onclick="logout()" class="btn btn-danger btn-sm">🚪 Logout</button>
+                </div>
+            </header>
+
+            <!-- Navigation Tabs -->
+            <div class="tabs">
+                <button class="tab-button active" onclick="openTab('employeeTab')">👨‍💼 Employee Quiz</button>
+                <button class="tab-button" onclick="openTab('adminTab')">⚙️ Admin Dashboard</button>
+            </div>
+
+            <!-- Employee Quiz Tab -->
+            <div id="employeeTab" class="tab-content active">
+                <div class="quiz-header">
+                    <h2>Employee Assessment</h2>
+                    <div class="active-quiz-info">
+                        <strong>Active Quiz:</strong> <span id="currentActiveQuiz">Technical</span>
+                    </div>
+                </div>
+
+                <!-- Employee Login Screen -->
+                <div id="employeeLoginScreen">
+                    <div class="login-form">
+                        <h3>Enter Your Details</h3>
+                        <form id="employeeLoginForm">
+                            <div class="form-group">
+                                <label for="employeeId">Employee ID</label>
+                                <input type="text" id="employeeId" placeholder="Enter your employee ID" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="employeeName">Full Name</label>
+                                <input type="text" id="employeeName" placeholder="Enter your full name" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Start Assessment</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Quiz Screen -->
+                <div id="employeeQuizScreen" class="hidden">
+                    <div class="quiz-header-bar">
+                        <div class="employee-info">
+                            <strong>Employee:</strong> <span id="currentEmployeeName"></span> | 
+                            <strong>ID:</strong> <span id="currentEmployeeId"></span>
+                        </div>
+                        <div class="quiz-info">
+                            <strong>Quiz:</strong> <span id="currentQuizName"></span> | 
+                            <strong>Progress:</strong> <span id="quizProgress">1/0</span>
+                        </div>
+                    </div>
+
+                    <div class="quiz-content">
+                        <h3>Assessment Questions</h3>
+                        <div id="questionContainer"></div>
+                        <div class="navigation">
+                            <button id="prevBtn" class="btn btn-secondary">← Previous</button>
+                            <button id="nextBtn" class="btn btn-primary">Next →</button>
+                            <button id="submitBtn" class="btn btn-success hidden">Submit Assessment</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Screen -->
+                <div id="employeeResultScreen" class="hidden">
+                    <div class="result-success">
+                        <div class="success-icon">✅</div>
+                        <h2>Assessment Submitted Successfully</h2>
+                        <p>Your results will be reviewed and communicated to you through the appropriate channels.</p>
+                        <button onclick="restartEmployeeQuiz()" class="btn btn-primary">Take Another Assessment</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Dashboard Tab -->
+            <div id="adminTab" class="tab-content">
+                <!-- Upload Section -->
+                <div class="upload-section">
+                    <h2>📤 Upload Questions from Excel/CSV</h2>
+                    
+                    <div class="upload-instructions">
+                        <h3>File Format Instructions:</h3>
+                        <p>Create a CSV/Excel file with these columns:</p>
+                        <ul>
+                            <li><strong>question</strong> - The question text</li>
+                            <li><strong>option1, option2, option3, option4</strong> - The four answer options</li>
+                            <li><strong>correct_answer</strong> - Number (1-4) of the correct option</li>
+                            <li><strong>category</strong> - Quiz category (e.g., "Technical", "General")</li>
+                        </ul>
+                        
+                        <div class="format-example">
+                            <strong>Example:</strong>
+                            <pre>question,option1,option2,option3,option4,correct_answer,category
+"What is phishing?","Fishing online","Email scam","Social media","Gaming",2,"Cybersecurity"</pre>
+                        </div>
+                    </div>
+
+                    <div class="upload-area">
+                        <input type="file" id="questionsFile" accept=".csv,.xlsx,.xls" class="file-input">
+                        <label for="questionsFile" class="file-label">
+                            <div class="upload-icon">📁</div>
+                            <span>Choose CSV or Excel File</span>
+                            <span id="fileName" class="file-name"></span>
+                        </label>
+                        <button id="uploadBtn" class="btn btn-primary">Upload Questions</button>
+                    </div>
+
+                    <div id="uploadStatus" class="upload-status hidden"></div>
+
+                    <div class="quiz-management">
+                        <h3>Available Quizzes</h3>
+                        <div id="quizList" class="quiz-list">
+                            <!-- Quizzes will be listed here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats">
+                    <div class="stat-card">
+                        <h3 id="totalAttempts">0</h3>
+                        <p>Total Attempts</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="averageScore">0%</h3>
+                        <p>Average Score</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="passRate">0%</h3>
+                        <p>Pass Rate (≥60%)</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="activeQuiz">Default</h3>
+                        <p>Active Quiz</p>
+                    </div>
+                </div>
+
+                <div class="results-section">
+                    <h2>All Quiz Results</h2>
+                    <div class="controls">
+                        <button onclick="exportToCSV()" class="btn btn-primary">📥 Export Results to CSV</button>
+                        <button onclick="clearAllResults()" class="btn btn-danger">🗑️ Clear All Results</button>
+                    </div>
+                    <div class="table-container">
+                        <table id="resultsTable">
+                            <thead>
+                                <tr>
+                                    <th>Employee ID</th>
+                                    <th>Name</th>
+                                    <th>Score</th>
+                                    <th>Percentage</th>
+                                    <th>Quiz Category</th>
+                                    <th>Date & Time</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsBody">
+                                <!-- Results will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="no-results" id="noResults">
+                    <p>No quiz results found. Employees need to take the quiz first.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Result Details Modal -->
+        <div id="resultModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Detailed Result</h2>
+                <div id="modalContent"></div>
+            </div>
         </div>
     </div>
 
