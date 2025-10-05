@@ -1,41 +1,62 @@
-// Quiz Questions
-const quizData = [
-    {
-        question: "What does HTML stand for?",
-        options: ["Hyper Text Markup Language", "High Tech Modern Language", "Hyper Transfer Markup Language", "Home Tool Markup Language"],
-        correct: 0
-    },
-    {
-        question: "Which programming language is known as the 'language of the web'?",
-        options: ["Python", "Java", "JavaScript", "C++"],
-        correct: 2
-    },
-    {
-        question: "What is the purpose of CSS?",
-        options: ["To structure web content", "To add interactivity to websites", "To style and layout web pages", "To manage databases"],
-        correct: 2
+// Dynamic Quiz Data - Reads from localStorage
+let quizData = [];
+
+// Load quiz data from localStorage
+function loadQuizData() {
+    const savedQuiz = localStorage.getItem('currentQuiz');
+    if (savedQuiz && JSON.parse(savedQuiz).length > 0) {
+        quizData = JSON.parse(savedQuiz);
+        console.log('Loaded dynamic quiz with', quizData.length, 'questions');
+    } else {
+        // Fallback to default questions if no dynamic quiz exists
+        quizData = [
+            {
+                question: "What does HTML stand for?",
+                options: ["Hyper Text Markup Language", "High Tech Modern Language", "Hyper Transfer Markup Language", "Home Tool Markup Language"],
+                correct: 0,
+                category: "Technical"
+            },
+            {
+                question: "Which programming language is known as the 'language of the web'?",
+                options: ["Python", "Java", "JavaScript", "C++"],
+                correct: 2,
+                category: "Technical"
+            },
+            {
+                question: "What is the purpose of CSS?",
+                options: ["To structure web content", "To add interactivity to websites", "To style and layout web pages", "To manage databases"],
+                correct: 2,
+                category: "Technical"
+            }
+        ];
+        console.log('Loaded default quiz with', quizData.length, 'questions');
     }
-];
+}
 
 let currentEmployee = null;
 let currentQuestionIndex = 0;
-let userAnswers = new Array(quizData.length).fill(null);
+let userAnswers = [];
 
-// Event Listeners - FIXED: Wait for DOM to load properly
+// DOM Elements
+const loginScreen = document.getElementById('loginScreen');
+const quizScreen = document.getElementById('quizScreen');
+const resultScreen = document.getElementById('resultScreen');
+const loginForm = document.getElementById('loginForm');
+const questionContainer = document.getElementById('questionContainer');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const submitBtn = document.getElementById('submitBtn');
+
+// Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize screens - hide quiz and result screens
-    const quizScreen = document.getElementById('quizScreen');
-    const resultScreen = document.getElementById('resultScreen');
+    // Load quiz data first
+    loadQuizData();
     
+    // Initialize screens
     if (quizScreen) quizScreen.classList.add('hidden');
     if (resultScreen) resultScreen.classList.add('hidden');
     
     // Add event listeners
-    const loginForm = document.getElementById('loginForm');
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const submitBtn = document.getElementById('submitBtn');
-    
     if (loginForm) {
         loginForm.addEventListener('submit', handleLogin);
     }
@@ -48,6 +69,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (submitBtn) {
         submitBtn.addEventListener('click', submitQuiz);
     }
+    
+    console.log('Quiz initialized with', quizData.length, 'questions');
 });
 
 function handleLogin(e) {
@@ -62,26 +85,30 @@ function handleLogin(e) {
     
     currentEmployee = { id: employeeId, name: employeeName };
     
-    // Hide login, show quiz
-    document.getElementById('loginScreen').classList.add('hidden');
-    document.getElementById('quizScreen').classList.remove('hidden');
-    
-    // Update employee info
-    document.getElementById('currentEmployeeName').textContent = employeeName;
-    document.getElementById('currentEmployeeId').textContent = employeeId;
+    // Reload quiz data in case it changed
+    loadQuizData();
     
     // Reset quiz state
     currentQuestionIndex = 0;
     userAnswers = new Array(quizData.length).fill(null);
     
+    // Show quiz screen
+    loginScreen.classList.add('hidden');
+    quizScreen.classList.remove('hidden');
+    
+    document.getElementById('currentEmployeeName').textContent = employeeName;
+    document.getElementById('currentEmployeeId').textContent = employeeId;
+    
     loadQuestion();
 }
 
 function loadQuestion() {
-    const question = quizData[currentQuestionIndex];
-    const questionContainer = document.getElementById('questionContainer');
+    if (quizData.length === 0) {
+        console.error('No quiz data available');
+        return;
+    }
     
-    if (!questionContainer) return;
+    const question = quizData[currentQuestionIndex];
     
     questionContainer.innerHTML = `
         <div class="question">
@@ -107,13 +134,9 @@ function loadQuestion() {
     });
     
     // Update navigation buttons
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const submitBtn = document.getElementById('submitBtn');
-    
-    if (prevBtn) prevBtn.disabled = currentQuestionIndex === 0;
-    if (nextBtn) nextBtn.classList.toggle('hidden', currentQuestionIndex === quizData.length - 1);
-    if (submitBtn) submitBtn.classList.toggle('hidden', currentQuestionIndex !== quizData.length - 1);
+    prevBtn.disabled = currentQuestionIndex === 0;
+    nextBtn.classList.toggle('hidden', currentQuestionIndex === quizData.length - 1);
+    submitBtn.classList.toggle('hidden', currentQuestionIndex !== quizData.length - 1);
 }
 
 function selectOption(index) {
@@ -136,6 +159,11 @@ function previousQuestion() {
 }
 
 function submitQuiz() {
+    if (quizData.length === 0) {
+        console.error('No quiz data available for submission');
+        return;
+    }
+    
     let score = 0;
     quizData.forEach((question, index) => {
         if (userAnswers[index] === question.correct) {
@@ -151,15 +179,16 @@ function submitQuiz() {
         currentEmployee.name, 
         score, 
         percentage, 
-        [...userAnswers]
+        [...userAnswers],
+        quizData[0]?.category || 'Default'
     );
     
     // Switch to result screen
-    document.getElementById('quizScreen').classList.add('hidden');
-    document.getElementById('resultScreen').classList.remove('hidden');
+    quizScreen.classList.add('hidden');
+    resultScreen.classList.remove('hidden');
 }
 
-function saveQuizResult(employeeId, employeeName, score, percentage, answers) {
+function saveQuizResult(employeeId, employeeName, score, percentage, answers, quizCategory) {
     const result = {
         employeeId: employeeId,
         employeeName: employeeName,
@@ -168,7 +197,7 @@ function saveQuizResult(employeeId, employeeName, score, percentage, answers) {
         percentage: percentage,
         answers: answers,
         timestamp: new Date().toISOString(),
-        quiz: 'Employee Assessment Quiz'
+        quiz: quizCategory
     };
     
     // Get existing results from localStorage
@@ -179,6 +208,8 @@ function saveQuizResult(employeeId, employeeName, score, percentage, answers) {
     
     // Save back to localStorage
     localStorage.setItem('allQuizResults', JSON.stringify(allResults));
+    
+    console.log('Result saved for', employeeName, 'in quiz', quizCategory);
     
     return result;
 }
